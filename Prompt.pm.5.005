@@ -8,7 +8,7 @@ use Text::Wrap;
 use Term::ReadKey qw(GetTerminalSize);
 
 BEGIN: {
-  $VERSION = '0.08';
+  $VERSION = '0.09';
   $debug = 0;
 }
 
@@ -84,7 +84,9 @@ sub prompt ($$$$;@) {
 
   $ok = 0;
   $before = 0;
-  
+
+  $mopt = lc($mopt);
+
   while (1) {
     
     $prompt_full = "$prompt ";
@@ -234,7 +236,7 @@ sub typeit ($$$$ ) {
       print "Invalid floating point value.  ";
     }
   } else {
-    croak "legalit called with unknown prompt type $mopt; stopped";
+    croak "typeit called with unknown prompt type $mopt; stopped";
   }
 
   return 0;
