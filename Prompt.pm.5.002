@@ -8,7 +8,7 @@ use Text::Wrap;
 use Term::ReadKey qw(GetTerminalSize);
 
 BEGIN: {
-  $VERSION = '0.09';
+  $VERSION = '0.10';
   $debug = 0;
 }
 

@@ -3,5 +3,6 @@ MANIFEST
 Makefile.PL
 Prompt.pm.5.002
 Prompt.pm.5.005
+Prompt.pm
 README
 test.pl
