@@ -6,41 +6,55 @@ SYNOPSIS
         $value = &prompt(...);
 
         use Term::Prompt qw(termwrap);
-
         print &termwrap(...);
 
-        use Term::Prompt qw(get_width);
-
-        $terminal_width = get_width();
+        $Term::Prompt::MULTILINE_INDENT = '';
 
 DESCRIPTION
-     This perl routine will take a prompt, a default response and a list of
-     possible responses and deal with the user interface, (and the user!),
-     by displaying the prompt, showing the default, and checking to be sure
-     that the response is one of the legal choices.
-     --Mark Henderson
+    This perl routine will take a prompt, a default response and a list of
+    possible responses and deal with the user interface, (and the user!), by
+    displaying the prompt, showing the default, and checking to be sure that
+    the response is one of the legal choices. --Mark Henderson
 
-     Derived from im_prompt2.pl, from anlpasswd (see
-     ftp://info.mcs.anl.gov/pub/systems/), with permission. Revisions for Perl 5,
-     addition of alternative help text presentation, addition of floating point
-     type, addition of regular expression type, addition of yes/no type, and line
-     wrapping by E. Allen Smith.
+    Derived from im_prompt2.pl, from anlpasswd (see
+    ftp://info.mcs.anl.gov/pub/systems/), with permission. Revisions for
+    Perl 5, addition of alternative help text presentation, addition of
+    floating point type, addition of regular expression type, addition of
+    yes/no type, and line wrapping by E. Allen Smith.
 
-     Additional "types" that could be added would be a phone type,
-     a social security type, a generic numeric pattern type...
+    Addition of menu functionality and $Term::Prompt::MULTILINE_INDENT by
+    Matthew Persico.
 
-     The usage is the following:
-     x = don't care, a = alpha-only, n = numeric-only, i = ignore case
+    Additional "types" that could be added would be a phone type, a social
+    security type, a generic numeric pattern type...
+
+    The usage is the following:
+
+     x = do not care, a = alpha-only, n = numeric-only, i = ignore case
      c = case sensitive, r = ranged by the low and high values
      f = floating-point, y = yes/no, e = regular expression - Added by Allen
+     m = menu - Added by Matthew
 
      $result = &prompt("x", "text prompt", "help prompt", "default" );
 
+    $result is whatever the user types.
+
      $result = &prompt("a", "text prompt", "help prompt", "default" );
+
+    $result is a single "word" consisting of [A-Za-z] only. The response is
+    rejected until it conforms.
 
      $result = &prompt("n", "text prompt", "help prompt", "default" );
 
-     The result will be a positive integer or 0.
+    The result will be a positive integer or 0.
+
+     $result = &prompt("-n", "text prompt", "help prompt", "default" );
+
+    The result will be a negative integer or 0.
+
+     $result = &prompt("+-n", "text prompt", "help prompt", "default" );
+
+    The result will be a any integer or 0.
 
      $result = &prompt("i", "text prompt", "help prompt", "default",
                              "legal_options-ignore-case-list");
@@ -53,38 +67,40 @@ DESCRIPTION
 
      $result = &prompt("f", "text prompt", "help prompt", "default");
 
-     The result will be a floating-point number.
+    The result will be a floating-point number.
 
      $result = &prompt("y", "text prompt", "help prompt", "default")
 
-     The result will be 1 for y, 0 for n. A default not starting with y or n
-     (or the uc versions of these) will be treated as y for positive, n for
-     negative.
+    The result will be 1 for y, 0 for n. A default not starting with y or n
+    (or the uc versions of these) will be treated as y for positive, n for
+    negative.
 
      $result = &prompt("e", "text prompt", "help prompt", "default",
                            "regular expression");
 
-     (The regular expression for the last has ^ and $ surrounding it automatically;
-     just put in .* before or after if you need to free it up before or
-     after.)
+    The regular expression for the last has ^ and $ surrounding it
+    automatically; just put in .* before or after if you need to free it up
+    before or after. - Allen
 
-     What, you might ask, is the difference between a "text prompt" and a
-     "help prompt"?  Think about the case where the "legal_options" look 
-     something like: "1-1000".  Now consider what happens when you tell someone
-     that "0" is not between 1-1000 and that the possible choices are:  :)
-     1 2 3 4 5 .....
-     This is what the "help prompt" is for.
+    What, you might ask, is the difference between a "text prompt" and a
+    "help prompt"? Think about the case where the "legal_options" look
+    something like: "1-1000". Now consider what happens when you tell
+    someone that "0" is not between 1-1000 and that the possible choices
+    are: :) 1 2 3 4 5 ..... This is what the "help prompt" is for.
 
-     It will work off of unique parts of "legal_options".
+    It will work off of unique parts of "legal_options".
 
-     This will actually be treated as a true "help prompt" if you capitalize the
-     type of prompt, and otherwise will be treated as a list of options.
-     Capitalizing the type of prompt will also mean that a return may be
-     accepted as a response, even if there is no default; whether it actually is
-     will depend on the type of prompt. Menus, for example, do not - necessarily
-     - do this. The logic of a return being accepted as a response is controlled
-     by the I<accept_empty_selection> flag (although this defaults to "yes" if
-     the prompt type is capitalized); see below.
+    Changed by Allen - if you capitalize the type of prompt, it will be
+    treated as a true "help prompt"; that is, it will be printed ONLY if the
+    menu has to be redisplayed due to and entry error. Otherwise, it will be
+    treated as a list of options and displayed only the first time the menu
+    is displayed.
+
+    Capitalizing the type of prompt will also mean that a return may be
+    accepted as a response, even if there is no default; whether it actually
+    is will depend on the type of prompt. Menus, for example, do not do
+    this. The logic of a return being accepted as a response is controlled
+    by the *no_selection_accepted* flag; see below.
 
      $result = &prompt("m", {
                              prompt           => "text prompt",
@@ -113,10 +129,6 @@ DESCRIPTION
                               accept_empty_selection     => 0
                              },
                         "help prompt", "default");
-
-    This will create a menu with numbered items to select. You replace the
-    normal *prompt* argument with a hash reference containing this
-    information:
 
     This will create a menu with numbered items to select. You replace the
     normal *prompt* argument with a hash reference containing this
@@ -177,14 +189,21 @@ DESCRIPTION
     The value of an 'empty' selection is an empty array or a reference to
     same, if *accept_multiple_selections* is in effect, or *undef* if not.
 
-  Other Functions
+  Other Functions and Variables
+    termwrap
     Part of Term::Prompt is the optionally exported function termwrap, which
     is used to wrap lines to the width of the currently selected filehandle
     (or to STDOUT or STDERR if the width of the current filehandle cannot be
     determined). It uses the GetTerminalSize function from Term::ReadKey
-    then Text::Wrap. The get_width function used internally by it is
-    likewise available for optional export; it defaults to the current value
-    of Text::Wrap::columns if the width cannot be determined.
+    then Text::Wrap.
+
+    MULTILINE_INDENT
+    This package variable holds the string to be used to indent lines of a
+    multiline prompt, after the first line. The default is "\t", which is
+    how the module worked before the variable was exposed. If yo do not want
+    ANY indentation:
+
+     $Term::Prompt::MULTILINE_INDENT = '';
 
 AUTHOR
     Mark Henderson (henderson@mcs.anl.gov or systems@mcs.anl.gov)
