@@ -9,14 +9,15 @@ require Exporter;
 our @ISA = qw (Exporter);
 our @EXPORT_OK = qw (rangeit legalit typeit menuit exprit yesit coderefit termwrap);
 our @EXPORT = qw (prompt);
-our $VERSION = '1.01';
+our $VERSION = '1.03';
 
 our $DEBUG = 0;
 our $MULTILINE_INDENT = "\t";
 
 use Carp;
 use Text::Wrap;
-use Term::ReadKey qw (GetTerminalSize);
+use Term::ReadKey qw (GetTerminalSize
+                      ReadMode);
 
 my %menu = (
 	    order => 'down',
@@ -25,7 +26,10 @@ my %menu = (
 	    accept_multiple_selections => 0,
 	    accept_empty_selection => 0,
 	    title => '',
-	    prompt => '>'
+	    prompt => '>',
+	    separator => '[^0-9]+',
+	    ignore_whitespace => 0,
+	    ignore_empties => 0
 	   );
 
 # Preloaded methods go here.
@@ -57,6 +61,7 @@ sub prompt ($$$$;@) {
     my $code = 0;
     my $yn = 0;
     my $uc = 0;
+    my $passwd = 0;
 
     if ($mopt ne lc($mopt)) {
 	$uc = 1;
@@ -105,6 +110,9 @@ sub prompt ($$$$;@) {
 	} else {
 	    $default = "n";
 	}
+    } elsif ($mopt eq 'p') {
+	($mopt, $prompt, $prompt_options, $default) = @_;
+	$passwd = 1;
     } else {
 	croak "prompt type $mopt not recognized";
     }
@@ -152,6 +160,8 @@ sub prompt ($$$$;@) {
 	    my $num_cols = (defined($menu{'cols'})
 			    ? $menu{'cols'}
 			    : int($gw/$entry_length));
+	    $num_cols ||= 1; # Could be zero if longest entry in a
+                             # list is wider than the screen
 	    my $num_rows = (defined($menu{'rows'})
 			    ? $menu{'rows'}
 			    : int($number_menu_items/$num_cols)+1) ;
@@ -229,7 +239,9 @@ sub prompt ($$$$;@) {
 
 	$/ = "\n";
 
+	ReadMode('noecho') if($passwd);
 	$repl = scalar(readline(*STDIN));
+	ReadMode('restore') if($passwd);
 
 	if (defined($old_divide)) {
 	    $/ = $old_divide;
@@ -256,7 +268,7 @@ sub prompt ($$$$;@) {
 	my @menu_repl = ();
 	if ($uc && ($repl eq '')) {
 	    $ok = 1;
-	} elsif ($type) {
+	} elsif ($type || $passwd) {
 	    $ok = &typeit($mopt, $repl, $DEBUG, $uc);
 	} elsif ($menu) {
 	    $ok = &menuit(\@menu_repl, $repl, $DEBUG, $uc);
@@ -347,7 +359,7 @@ sub typeit ($$$$ ) {
 
     print "inside of typeit\n" if $DEBUG;
 
-    if ( $mopt eq "x" ) {
+    if ( $mopt eq "x" or $mopt eq "p" ) {
 	return 1;
     } elsif ( $mopt eq "a" ) {
 	if ( $repl =~ /^[a-zA-Z]*$/ ) {
@@ -393,13 +405,21 @@ sub menuit (\@$$$ ) {
     my ($ra_repl, $repl, $DEBUG, $uc) = @_;
     my @msgs = ();
 
-    ## Parse for multiple values. Any non-numeric char is a
-    ## separator. Strip leading and trailing whitespace to avoid a being
+    ## Parse for multiple values. Strip all whitespace if requested or
+    ## just strip leading and trailing whitespace to avoid a being
     ## interpreted as separating empty choices.
 
-    $repl =~ s/^(?:\s+)//;
-    $repl =~ s/(?:\s+)$//;
-    my @repls = split(/[^0-9]+/,$repl);
+    if($menu{'ignore_whitespace'}) {
+	$repl =~ s/\s+//g;
+    } else {
+	$repl =~ s/^(?:\s+)//;
+	$repl =~ s/(?:\s+)$//;
+    }
+
+    my @repls = split(/$menu{'separator'}/,$repl);
+    if($menu{ignore_empties}) {
+	@repls = grep{length($_)} @repls;
+    }
 
     ## Validations
     if ( scalar(@repls) > 1
@@ -591,8 +611,9 @@ its usage and is one of the following single characters:
  f: floating-point
  y: yes/no
  e: regular expression
- m: menu
  s: sub (actually, a code ref, but 'c' was taken)
+ p: password (keystrokes not echoed)
+ m: menu
 
 =over 4
 
@@ -669,6 +690,13 @@ put in .* before or after if you need to free it up before or after.
 User reply is passed to given code reference as first and only
 argument.  If code returns true, input is accepted.
 
+=item p: password
+
+ $result = &prompt("p", "text prompt", "help prompt", "default" );
+
+$result is whatever the user types, but the characters are not echoed 
+to the screen.
+
 =item m: menu
 
  @results = &prompt("m", {
@@ -681,7 +709,9 @@ argument.  If code returns true, input is accepted.
 			  display_base     => 1,
 			  return_base      => 0,
 			  accept_multiple_selections => 0,
-			  accept_empty_selection     => 0
+			  accept_empty_selection     => 0,
+                          ignore_whitespace => 0,
+                          separator         => '[^0-9]+'
 			 },
 		    "help prompt", "default");
 
@@ -754,6 +784,49 @@ the menu will not be repeated and the 'empty' selection will be
 returned. The value of an 'empty' selection is an empty array or a
 reference to same, if I<accept_multiple_selections> is in effect, or
 I<undef> if not.
+
+=item separator
+
+A regular expression that defines what characters are allowed between
+multiple responses. The default is to allow all non-numeric characters
+to be separators. That can cause problems when a user mistakenly
+enters the lead letter of the menu item instead of the item
+number. You are better off replacing the default with something more
+reasonable, such as:
+
+ [,]    ## Commas
+ [,/]   ## Commas or slashes
+ [,/\s] ## Commas or slashes or whitespace
+
+=item ignore_whitespace
+
+When set, allows spaces between menu responses to be ignored, so that
+
+ 1, 5, 6
+
+is collapsed to
+
+ 1,5,6
+
+before parsing. B<NOTE:> Do not set this option if you are including
+whitespace as a legal separator.
+
+=item ignore_empties
+
+When set, consecutive separators will not result in an empty
+entry. For example, without setting this option:
+
+ 1,,8,9
+
+will result in a return of
+
+ (1,'',8,9)
+
+When set, the return will be:
+
+ (1,8,9)
+
+which is probably what you want.
 
 =back
 

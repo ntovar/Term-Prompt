@@ -1,5 +1,23 @@
 Revision history for Perl extension Term::Prompt.
 
+1.03  Thu Oct 08 20:00:00 2004
+	- Added option 'password' to not echo the value typed.
+	- Added options for menu: 'separator', 'ignore_whitespace' and
+	'ignore_empties'. This was prompted by Nicolas Cheve
+	discovering that when users mistakenly entered
+	the first letter of a menu item instead of the item number,
+	the code would happily use the letter as a separator of NO
+	entries and happily return if accept_empty_selection was
+	set. Now you can limit the separator list, ignore spurious
+	whitespace between responses (if whitespace is not a valid
+	separator) and ignore consecutive separators.
+
+1.02  Tue Jun 22 20:00:00 2004
+        - Always insure that $num_cols is at least 1.  If the longest
+        entry in a list is wider than the screen, then the number of
+        columns goes to zero which leads to a division by zero
+        otherwise. Thank you Andreas J Koenig.
+
 1.01  Thu May 13 21:30:00 2004
 	- Corrected typo at line 82 in Prompt.pm - the entry for code
 	ref was left a 'c' when merged in from Tuomas Jormola's
