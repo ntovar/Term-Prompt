@@ -47,7 +47,7 @@ DESCRIPTION
      $result = &prompt("r", "text prompt", "help prompt", "default",
                            "low", "high");
 
-     $result = &prompt("f", "text prompt", "help prompt", "default" );
+     $result = &prompt("f", "text prompt", "help prompt", "default");
 
      The result will be a floating-point number.
 

@@ -10,8 +10,19 @@ WriteMakefile('NAME'	=> 'Term::Prompt',
 			     },
 	      'dist' => {
 			 'COMPRESS'=>"gzip",
-			 'SUFFIX'=>"gz",
-			 'PREOP'=> "COLUMNS=76 pod2text \$(MAN1PODS)" .
-			 " \$(MAN3PODS) > \$(DISTVNAME)/README"
+			 'SUFFIX'=>"gz"
 			}
 	     );
+
+sub MY::dist_dir {
+  package MY; # so that "SUPER" works right
+  my $inherited = shift->SUPER::dist_dir(@_);
+  $inherited =~ s/(distdir\s*:)/$1 README/;
+  return $inherited;
+}
+
+sub MY::postamble {
+  return "\n" .
+    "README : \$(MAN1PODS) \$(MAN3PODS)\n" .
+      "\tCOLUMNS=76 pod2text \$(MAN1PODS) \$(MAN3PODS) > README\n";
+}

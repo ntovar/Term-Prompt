@@ -7,7 +7,8 @@ use Text::Wrap;
 use Term::ReadKey qw(GetTerminalSize);
 
 BEGIN: {
-  $VERSION = '0.06';
+  $VERSION = '0.07';
+  $debug = 0;
 }
 
 @ISA = qw(Exporter);
@@ -15,49 +16,49 @@ BEGIN: {
 @EXPORT_OK = qw(rangeit legalit typeit exprit yesit termwrap);
 
 sub prompt ($$$$;@) {
-  my($debug) = 0;		# debugging
   
   my($mopt, $prompt, $prompt_options, $help_prompt, $default, @things);
-  my($repl, $match_options, $case, $low, $high, $before, $regexp,
-     $prompt_full);
+  my($repl, $match_options, $case, $low, $high, $before, $regexp);
+  my $prompt_full;
   
   # Figure out just what we are doing here
   $mopt = $_[0];
   print "mopt is: $mopt\n" if $debug;
   
   # check the size of the match option, it should just have one char.
-  croak "Illegal call in im_prompt2 prompter."
-    if ( length($mopt) > 1 );
+  if (length($mopt) > 1) {
+    croak "Illegal call of prompt; $mopt is more than one character; stopped";
+  }
   
-  my($type) = 0;
-  my($legal) = 0;
-  my($range) = 0;
-  my($expr) = 0;
-  my($yn) = 0;
-  my($uc) = 0;
+  my $type = 0;
+  my $legal = 0;
+  my $range = 0;
+  my $expr = 0;
+  my $yn = 0;
+  my $uc = 0;
   
   if ($mopt ne lc($mopt)) {
     $uc = 1;
     $mopt = lc($mopt);
   }
 
-  if ( $mopt eq "x" || $mopt eq "a" || $mopt eq "n" || $mopt eq "f" ) {
+  if ($mopt eq "x" || $mopt eq "a" || $mopt eq "n" || $mopt eq "f") {
     # More efficient this way - Allen
     ($mopt, $prompt, $prompt_options, $default) = @_;
     $type = 1;
-  } elsif ( $mopt eq "c" || $mopt eq "i" ) {
+  } elsif ($mopt eq "c" || $mopt eq "i") {
     ($mopt, $prompt, $prompt_options, $default, @things) = @_;
     $legal = 1;
-  } elsif ( $mopt eq "r" ) {
+  } elsif ($mopt eq "r") {
     ($mopt, $prompt, $prompt_options, $default, $low, $high) = @_;
     $range = 1;
-  } elsif ( $mopt eq "e" ) {
+  } elsif ($mopt eq "e") {
     ($mopt, $prompt, $prompt_options, $default, $regexp) = @_;
     $expr = 1;
-  } elsif ( $mopt eq "y" ) {
+  } elsif ($mopt eq "y") {
     ($mopt, $prompt, $prompt_options, $default) = @_;
     $yn = 1;
-    if ((!defined($prompt_options)) || ($prompt_options eq '')) {
+    unless (defined($prompt_options) && length($prompt_options)) {
       if ($uc) {
 	$prompt_options = "Enter y or n";
       } else {
@@ -97,7 +98,7 @@ sub prompt ($$$$;@) {
     # print out the prompt string in all its gore
     print termwrap($prompt_full);
 
-    my($old_divide) = undef;
+    my $old_divide = undef;
 
     if (defined($/)) {
       $old_divide = $/;
@@ -132,23 +133,23 @@ sub prompt ($$$$;@) {
 
     if ($uc && ($repl eq '')) {
       $ok = 1;
-    } elsif ( $type ) {
-      $ok = &typeit(lc($mopt), $repl, $debug, $uc);
-    } elsif ( $legal ) {
-      ($ok,$repl) = &legalit(lc($mopt), $repl, $uc, @things);
-    } elsif ( $range ) {
+    } elsif ($type) {
+      $ok = &typeit($mopt, $repl, $debug, $uc);
+    } elsif ($legal) {
+      ($ok,$repl) = &legalit($mopt, $repl, $uc, @things);
+    } elsif ($range) {
       $ok = &rangeit($repl, $low, $high, $uc);
-    } elsif ( $expr ) { 
-      $ok = &exprit($repl, $regexp, $prompt_options, $debug);
-    } elsif ( $yn ) {
+    } elsif ($expr) { 
+      $ok = &exprit($repl, $regexp, $prompt_options, $uc, $debug);
+    } elsif ($yn) {
       ($ok,$repl) = &yesit($repl, $uc, $debug);
     } else {
-      croak "No subroutine known for prompt option $mopt.";
+      croak "No subroutine known for prompt type $mopt.";
     }
     
-    if ( $ok ) {
+    if ($ok) {
       return $repl;
-    } elsif ( $prompt_options ne '' ) {
+    } elsif (defined($prompt_options) && length($prompt_options)) {
       if ($uc) {
 	print termwrap("$prompt_options\n");
       } else {
@@ -159,14 +160,14 @@ sub prompt ($$$$;@) {
   }
 }
 
-sub rangeit ($$$$) {
+sub rangeit ($$$$ ) {
   # this routine makes sure that the reply is within a given range 
 
   my($repl, $low, $high, $uc) = @_;
 
   if ( $low <= $repl && $repl <= $high ) { 
     return 1;
-  } elsif (! $uc) {
+  } elsif (!$uc) {
     print "Invalid range value.  ";
   }
   return 0;
@@ -183,11 +184,19 @@ sub legalit ($$$@) {
     return 1, $repl;		# save time
   }
 
-  my($quote_repl) = quotemeta($repl);
-  if ($mopt eq "i") {
+  my $quote_repl = quotemeta($repl);
+  if ($] >= 5.005) {
+    if ($mopt eq "i") {
+      $quote_repl = qr/^$quote_repl/i;
+    } else {
+      $quote_repl = qr/^$quote_repl/;
+    }
     @match = grep {$_ =~ m/$quote_repl/i} (@things);
+
+  } elsif ($mopt eq "i") {
+    @match = grep {$_ =~ m/^$quote_repl/i} (@things);
   } else {
-    @match = grep {$_ =~ m/$quote_repl/} (@things);
+    @match = grep {$_ =~ m/^$quote_repl/} (@things);
   }
 
   if (scalar(@match) == 1) {
@@ -200,7 +209,7 @@ sub legalit ($$$@) {
   }
 }
 
-sub typeit ($$$$) {
+sub typeit ($$$$ ) {
   # this routine does checks based on the following:
   # x = no checks, a = alpha only, n = numeric only
   
@@ -208,51 +217,50 @@ sub typeit ($$$$) {
   
   print "inside of typeit\n" if $debug;
   
-  if ( $mopt eq "x" ) { return 1; }
-  
-  if ( $mopt eq "a" ) {
+  if ( $mopt eq "x" ) {
+    return 1;
+  } elsif ( $mopt eq "a" ) {
     if ( $repl =~ /^[a-zA-Z]*$/ ) { 
       return 1;
     } elsif (! $uc) {		
       print "Invalid type value.  ";
     }
-    return 0;
-  }
-
-  if ( $mopt eq "n" ) {
+  } elsif ( $mopt eq "n" ) {
     if ( $repl =~/^[0-9]*$/ ) { 
       return 1; 
     } elsif (! $uc) {
       print "Invalid numeric value.  ";
     }
-    return 0;
-  }
-
-  if ( $mopt eq "f" ) {
+  } elsif ( $mopt eq "f" ) {
     if (( $repl =~ m/^-?[0-9]+\.?[0-9]*$/ ) ||
 	( $repl =~ m/^-?[0-9]*\.[0-9]+$/ )) {
       return 1;
     } elsif (! $uc) {
       print "Invalid floating point value.  ";
     }
+  } else {
+    croak "legalit called with unknown prompt type $mopt; stopped";
   }
+
+  return 0;
 }
 
-sub exprit ($$$$) {
+sub exprit ($$$$$ ) {
   # This routine does checks based on whether something
   # matches a supplied regexp - Allen
-  my ($repl, $regexp, $prompt_options, $debug) = @_;
+  my($repl, $regexp, $prompt_options, $uc, $debug) = @_;
   print "inside of exprit\n" if $debug;
   
   if ( $repl =~ /^$regexp$/ ) {
     return 1;
-  } elsif ( $prompt_options eq '') {
+  } elsif ((!$uc) ||
+	   (!defined($prompt_options)) || (!length($prompt_options))) {
     print termwrap("Reply needs to match regular expression /^$regexp$/.\n");
-    return 0;
   }
+  return 0;
 }
 
-sub yesit ($$$) {
+sub yesit ($$$ ) {
   # basic yes or no - Allen
   my ($repl, $uc, $debug) = @_;
   print "inside of yesit\n" if $debug;
@@ -377,7 +385,7 @@ Term::Prompt - Perl extension for prompting a user for information
  $result = &prompt("r", "text prompt", "help prompt", "default",
                        "low", "high");
 
- $result = &prompt("f", "text prompt", "help prompt", "default" );
+ $result = &prompt("f", "text prompt", "help prompt", "default");
 
  The result will be a floating-point number.
 

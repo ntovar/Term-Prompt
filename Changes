@@ -4,10 +4,10 @@ Revision history for Perl extension Term::Prompt.
 	- original version; created by h2xs 1.18
 
 0.02  Fri Oct 22 15:31:45 1999
-	- bugfix for uppercase usage for XANCI types
+	- bugfix for uppercase usage for ACINX types
 
 0.03  Fri Oct 22 17:50:12 1999
-	- bugfix for $/, uppercase usage for XANCI types
+	- bugfix for $/, uppercase usage for ACINX types
 
 0.04  Thu Oct 28 06:40:45 EDT 1999
 	- addition of f/F type; change from Term::Size to
@@ -23,3 +23,8 @@ Revision history for Perl extension Term::Prompt.
 	- termwrap made EXPORT_OK, description added to manpage. Bug in
 	  legalit not accepting 0 as legal fixed. Abbreviation code
 	  modified to more efficient (copying off of Getopt::Long).
+
+0.07  Tue Mar 14 10:02:45 EST 2000
+	- legalit now uses qr if Perl version is 5.005 or above, and
+	  abbreviation code only matches start of text. Minor improvements
+	  to other code.
