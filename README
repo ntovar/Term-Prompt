@@ -1,0 +1,76 @@
+NAME
+    Term::Prompt - Perl extension for prompting a user for information
+
+SYNOPSIS
+        use Term::Prompt;
+
+DESCRIPTION
+     This perl routine will take a prompt, a default response and a list of
+     possible responses and deal with the user interface, (and the user!),
+     by displaying the prompt, showing the default, and checking to be sure
+     that the response is one of the legal choices.
+     --Mark Henderson
+
+     Derived from im_prompt2.pl, from anlpasswd (see
+     ftp://info.mcs.anl.gov/pub/systems/), with permission. Revisions for Perl 5,
+     addition of alternative help text presentation, addition of regular
+     expression type, addition of yes/no type, and line wrapping by E. Allen Smith.
+
+     Additional "types" that could be added would be a phone type,
+     a social security type, a generic numeric pattern type...
+
+     The usage is the following:
+     x = don't care, a = alpha-only, n = numeric-only, i = ignore case
+     c = case sensitive, r = ranged by the low and high values
+     y = yes/no, e = regular expression - Added by Allen
+
+     $result = &prompt("x", "text prompt", "help prompt", "default" );
+
+     $result = &prompt("a", "text prompt", "help prompt", "default" );
+
+     $result = &prompt("n", "text prompt", "help prompt", "default" );
+
+     $result = &prompt("i", "text prompt", "help prompt", "default",
+                             "legal_options-ignore-case-list");
+
+     $result = &prompt("c", "text prompt", "help prompt", "default",
+                             "legal_options-case-sensitive-list");
+
+     $result = &prompt("r", "text prompt", "help prompt", "default",
+                           "low", "high");
+
+     $result = &prompt("y", "text prompt", "help prompt", "default")
+
+     The result will be 1 for y, 0 for n. A default not starting with y or n
+     (or the uc versions of these) will be treated as y for positive, n for
+     negative.
+
+     $result = &prompt("e", "text prompt", "help prompt", "default",
+                           "regular expression");
+
+     The regular expression for the last has ^ and $ surrounding it automatically;
+     just put in .* before or after if you need to free it up before or
+     after. - Allen
+
+     What, you might ask, is the difference between a "text prompt" and a
+     "help prompt"?  Think about the case where the "legal_options" look 
+     something like: "1-1000".  Now consider what happens when you tell someone
+     that "0" is not between 1-1000 and that the possible choices are:  :)
+     1 2 3 4 5 .....
+     This is what the "help prompt" is for.
+
+     It will work off of unique parts of "legal_options".
+
+     Changed by Allen - it will be treated as a true "help prompt" if you
+     capitalize the type of prompt, and otherwise will be treated as a list of
+     options. Capitalizing the type of prompt will also mean that a return may be
+     accepted as a response, even if there is no default; whether it actually is
+     will depend on the type of prompt.
+
+AUTHOR
+    Mark Henderson (henderson@mcs.anl.gov or systems@mcs.anl.gov)
+    Primary contact author: Allen Smith (easmith@beatrice.rutgers.edu)
+
+SEE ALSO
+    perl(1).
+
