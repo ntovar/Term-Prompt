@@ -3,6 +3,20 @@ use ExtUtils::MakeMaker;
 # See lib/ExtUtils/MakeMaker.pm for details of how to influence
 # the contents of the Makefile that is written.
 
+use File::Copy;
+require 5.002;			# Prompt.pm has prototyping
+
+if ($] >= 5.005) {
+  (copy('Prompt.pm.5.005','Prompt.pm')) ||
+    (die "Can't copy Prompt.pm.5.005 to Prompt.pm: $!; stopped");
+} else {
+  (copy('Prompt.pm.5.002','Prompt.pm')) ||
+    (die "Can't copy Prompt.pm.5.002 to Prompt.pm: $!; stopped");
+}
+
+(chmod(0755,'Prompt.pm')) ||
+  (die "Can't chmod Prompt.pm to 0755: $!; stopped");
+
 WriteMakefile('NAME'	=> 'Term::Prompt',
 	      'VERSION_FROM' => 'Prompt.pm', # finds $VERSION
 	      'PREREQ_PM' => {

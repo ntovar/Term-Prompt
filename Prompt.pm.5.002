@@ -1,5 +1,6 @@
+#-*- perl -*-
 package Term::Prompt;
-require 5.000;
+require 5.002;
 require Exporter;
 use Carp;
 
@@ -7,7 +8,7 @@ use Text::Wrap;
 use Term::ReadKey qw(GetTerminalSize);
 
 BEGIN: {
-  $VERSION = '0.07';
+  $VERSION = '0.08';
   $debug = 0;
 }
 
@@ -185,15 +186,8 @@ sub legalit ($$$@) {
   }
 
   my $quote_repl = quotemeta($repl);
-  if ($] >= 5.005) {
-    if ($mopt eq "i") {
-      $quote_repl = qr/^$quote_repl/i;
-    } else {
-      $quote_repl = qr/^$quote_repl/;
-    }
-    @match = grep {$_ =~ m/$quote_repl/i} (@things);
 
-  } elsif ($mopt eq "i") {
+  if ($mopt eq "i") {
     @match = grep {$_ =~ m/^$quote_repl/i} (@things);
   } else {
     @match = grep {$_ =~ m/^$quote_repl/} (@things);

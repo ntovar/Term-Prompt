@@ -28,3 +28,9 @@ Revision history for Perl extension Term::Prompt.
 	- legalit now uses qr if Perl version is 5.005 or above, and
 	  abbreviation code only matches start of text. Minor improvements
 	  to other code.
+
+0.08  Wed Mar 15 13:05:21 EST 2000
+	- Now have two seperate versions, one for 5.005 and above and one
+	  for below; the first uses qr. Grr... I dislike using two seperate
+	  files, but it seems the simplest way. Thanks to schinder@pobox.com
+	  for informing me that a simple "if ($] >= 5.005)" won't work.
