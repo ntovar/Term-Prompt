@@ -13,3 +13,8 @@ Revision history for Perl extension Term::Prompt.
 	- addition of f/F type; change from Term::Size to
 	  Term::ReadKey's GetTerminalSize (more portable and
 	  doesn't have to be a glob fed to it)
+
+0.05  Wed Nov 10 13:21:03 EST 1999
+	- Missing right bracket restored... my thanks to
+	  schinder@pobox.com. I have no idea how I didn't load in 0.04 
+	  here and spot the problem...

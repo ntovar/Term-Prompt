@@ -8,7 +8,7 @@ use Text::Wrap;
 use Term::ReadKey qw(GetTerminalSize);
 
 BEGIN: {
-  $VERSION = '0.04';
+  $VERSION = '0.05';
 }
 
 @ISA = qw(Exporter);
@@ -234,6 +234,7 @@ sub typeit ($$$$) {
     } elsif (! $uc) {
       print "Invalid floating point value.  ";
     }
+  }
 }
 
 sub exprit ($$$$) {
