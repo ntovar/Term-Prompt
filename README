@@ -9,6 +9,10 @@ SYNOPSIS
 
         print &termwrap(...);
 
+        use Term::Prompt qw(get_width);
+
+        $terminal_width = get_width();
+
 DESCRIPTION
      This perl routine will take a prompt, a default response and a list of
      possible responses and deal with the user interface, (and the user!),
@@ -60,9 +64,9 @@ DESCRIPTION
      $result = &prompt("e", "text prompt", "help prompt", "default",
                            "regular expression");
 
-     The regular expression for the last has ^ and $ surrounding it automatically;
+     (The regular expression for the last has ^ and $ surrounding it automatically;
      just put in .* before or after if you need to free it up before or
-     after. - Allen
+     after.)
 
      What, you might ask, is the difference between a "text prompt" and a
      "help prompt"?  Think about the case where the "legal_options" look 
@@ -73,25 +77,122 @@ DESCRIPTION
 
      It will work off of unique parts of "legal_options".
 
-     Changed by Allen - it will be treated as a true "help prompt" if you
-     capitalize the type of prompt, and otherwise will be treated as a list of
-     options. Capitalizing the type of prompt will also mean that a return may be
+     This will actually be treated as a true "help prompt" if you capitalize the
+     type of prompt, and otherwise will be treated as a list of options.
+     Capitalizing the type of prompt will also mean that a return may be
      accepted as a response, even if there is no default; whether it actually is
-     will depend on the type of prompt.
+     will depend on the type of prompt. Menus, for example, do not - necessarily
+     - do this. The logic of a return being accepted as a response is controlled
+     by the I<accept_empty_selection> flag (although this defaults to "yes" if
+     the prompt type is capitalized); see below.
+
+     $result = &prompt("m", {
+                             prompt           => "text prompt",
+                             title            => 'My Silly Menu',
+                             items            => [ qw (foo bar baz biff spork boof akak) ],
+                             order            => 'across',
+                             rows             => 1,
+                             cols             => 1,
+                             display_base     => 1,
+                             return_base      => 0,
+                             accept_multiple_selections => 0,
+                             accept_empty_selection     => 0
+                            },
+                       "help prompt", "default");
+
+     @results = &prompt("m", {
+                              prompt           => "text prompt",
+                              title            => 'My Silly Menu',
+                              items            => [ qw (foo bar baz biff spork boof akak) ],
+                              order            => 'across',
+                              rows             => 1,
+                              cols             => 1,
+                              display_base     => 1,
+                              return_base      => 0,
+                              accept_multiple_selections => 0,
+                              accept_empty_selection     => 0
+                             },
+                        "help prompt", "default");
+
+    This will create a menu with numbered items to select. You replace the
+    normal *prompt* argument with a hash reference containing this
+    information:
+
+    This will create a menu with numbered items to select. You replace the
+    normal *prompt* argument with a hash reference containing this
+    information:
+
+    prompt
+    The prompt string.
+
+    title
+    Text printed above the menu.
+
+    items
+    An array reference to the list of text items to display. They will be
+    numbered ascending in the order presented.
+
+    order
+    If set to 'across', the item numbers run across the menu:
+
+     1) foo    2) bar    3) baz
+     4) biff   5) spork  6) boof
+     7) akak
+
+    If set to 'down', the item numbers run down the menu:
+
+     1) foo    4) biff   7) akak
+     2) bar    5) spork
+     3) baz    6) boof
+
+    'down' is the default.
+
+    rows,cols
+    Forces the number of rows and columns. Otherwise, the number of rows and
+    columns is determined from the number of items and the maximum length of
+    an item with its number.
+
+    Usually, you would set rows = 1 or cols = 1 to force a non-wrapped
+    layout. Setting both in tandem is untested. Cavet programmer.
+
+    display_base,return_base
+    Internally, the items are indexed the 'Perl' way, from 0 to scalar -1.
+    The display_base is the number added to the index on the menu display.
+    The return_base is the number added to the index before the reply is
+    returned to the programmer.
+
+    The defaults are 1 and 0, respectively.
+
+    accept_multiple_selections
+    When set to logical true (1 will suffice), more than one menu item may
+    be selected. The return from *prompt()* will be an array or array ref,
+    depending on how it is called.
+
+    The default is 0. The return value is a single scalar containing the
+    selection.
+
+    accept_empty_selection
+    When set to logical true (1 will suffice), if no items are selected, the
+    menu will not be repeated and the 'empty' selection will be returned.
+    The value of an 'empty' selection is an empty array or a reference to
+    same, if *accept_multiple_selections* is in effect, or *undef* if not.
 
   Other Functions
-
-    Part of Term::Prompt is the optionally exported function termwrap,
-    which is used to wrap lines to the width of the currently selected
-    filehandle (or to STDOUT or STDERR if the width of the current
-    filehandle cannot be determined). It uses the GetTerminalSize
-    function from Term::ReadKey then Text::Wrap.
+    Part of Term::Prompt is the optionally exported function termwrap, which
+    is used to wrap lines to the width of the currently selected filehandle
+    (or to STDOUT or STDERR if the width of the current filehandle cannot be
+    determined). It uses the GetTerminalSize function from Term::ReadKey
+    then Text::Wrap. The get_width function used internally by it is
+    likewise available for optional export; it defaults to the current value
+    of Text::Wrap::columns if the width cannot be determined.
 
 AUTHOR
     Mark Henderson (henderson@mcs.anl.gov or systems@mcs.anl.gov)
+
     Primary contact author: Allen Smith (easmith@beatrice.rutgers.edu)
 
+    Menu additions by Matthew O. Persico (persicom@acedsl.com)
+
 SEE ALSO
-    the perl manpage, the Term::ReadKey manpage, and the Text::Wrap
-    manpage.
+    perl, Term::ReadKey, and Text::Wrap.
 
