@@ -1,217 +1,35 @@
-NAME
-    Term::Prompt - Perl extension for prompting a user for information
+Term-Prompt version 0.13
+========================
 
-SYNOPSIS
-        use Term::Prompt;
-        $value = &prompt(...);
+Module to handle various forms of user input via terminal. Currently
+maintained by Matthew O. Persico <persicom@cpan.org>.
 
-        use Term::Prompt qw(termwrap);
-        print &termwrap(...);
+INSTALLATION
 
-        $Term::Prompt::MULTILINE_INDENT = '';
+To install this module type the following:
 
-DESCRIPTION
-    This perl routine will take a prompt, a default response and a list of
-    possible responses and deal with the user interface, (and the user!), by
-    displaying the prompt, showing the default, and checking to be sure that
-    the response is one of the legal choices. --Mark Henderson
+   perl Makefile.PL
+   make
+   make test
+   make install
 
-    Derived from im_prompt2.pl, from anlpasswd (see
-    ftp://info.mcs.anl.gov/pub/systems/), with permission. Revisions for
-    Perl 5, addition of alternative help text presentation, addition of
-    floating point type, addition of regular expression type, addition of
-    yes/no type, and line wrapping by E. Allen Smith.
+No XS code is used, therfore no 'C' compiler is required.
 
-    Addition of menu functionality and $Term::Prompt::MULTILINE_INDENT by
-    Matthew Persico.
+DEPENDENCIES
 
-    Additional "types" that could be added would be a phone type, a social
-    security type, a generic numeric pattern type...
+This module requires these other modules and libraries:
 
-    The usage is the following:
+ Text::Wrap;
+ Term::ReadKey;
 
-     x = do not care, a = alpha-only, n = numeric-only, i = ignore case
-     c = case sensitive, r = ranged by the low and high values
-     f = floating-point, y = yes/no, e = regular expression - Added by Allen
-     m = menu - Added by Matthew
+Minimum versions are not established; The latest versions should
+certainly work. If you have an older version that does not work,
+please advise the maintainer.
 
-     $result = &prompt("x", "text prompt", "help prompt", "default" );
+COPYRIGHT AND LICENCE
 
-    $result is whatever the user types.
+Copyright (C) 2004 by Matthew O. Persico
 
-     $result = &prompt("a", "text prompt", "help prompt", "default" );
-
-    $result is a single "word" consisting of [A-Za-z] only. The response is
-    rejected until it conforms.
-
-     $result = &prompt("n", "text prompt", "help prompt", "default" );
-
-    The result will be a positive integer or 0.
-
-     $result = &prompt("-n", "text prompt", "help prompt", "default" );
-
-    The result will be a negative integer or 0.
-
-     $result = &prompt("+-n", "text prompt", "help prompt", "default" );
-
-    The result will be a any integer or 0.
-
-     $result = &prompt("i", "text prompt", "help prompt", "default",
-                             "legal_options-ignore-case-list");
-
-     $result = &prompt("c", "text prompt", "help prompt", "default",
-                             "legal_options-case-sensitive-list");
-
-     $result = &prompt("r", "text prompt", "help prompt", "default",
-                           "low", "high");
-
-     $result = &prompt("f", "text prompt", "help prompt", "default");
-
-    The result will be a floating-point number.
-
-     $result = &prompt("y", "text prompt", "help prompt", "default")
-
-    The result will be 1 for y, 0 for n. A default not starting with y or n
-    (or the uc versions of these) will be treated as y for positive, n for
-    negative.
-
-     $result = &prompt("e", "text prompt", "help prompt", "default",
-                           "regular expression");
-
-    The regular expression for the last has ^ and $ surrounding it
-    automatically; just put in .* before or after if you need to free it up
-    before or after. - Allen
-
-    What, you might ask, is the difference between a "text prompt" and a
-    "help prompt"? Think about the case where the "legal_options" look
-    something like: "1-1000". Now consider what happens when you tell
-    someone that "0" is not between 1-1000 and that the possible choices
-    are: :) 1 2 3 4 5 ..... This is what the "help prompt" is for.
-
-    It will work off of unique parts of "legal_options".
-
-    Changed by Allen - if you capitalize the type of prompt, it will be
-    treated as a true "help prompt"; that is, it will be printed ONLY if the
-    menu has to be redisplayed due to and entry error. Otherwise, it will be
-    treated as a list of options and displayed only the first time the menu
-    is displayed.
-
-    Capitalizing the type of prompt will also mean that a return may be
-    accepted as a response, even if there is no default; whether it actually
-    is will depend on the type of prompt. Menus, for example, do not do
-    this. The logic of a return being accepted as a response is controlled
-    by the *no_selection_accepted* flag; see below.
-
-     $result = &prompt("m", {
-                             prompt           => "text prompt",
-                             title            => 'My Silly Menu',
-                             items            => [ qw (foo bar baz biff spork boof akak) ],
-                             order            => 'across',
-                             rows             => 1,
-                             cols             => 1,
-                             display_base     => 1,
-                             return_base      => 0,
-                             accept_multiple_selections => 0,
-                             accept_empty_selection     => 0
-                            },
-                       "help prompt", "default");
-
-     @results = &prompt("m", {
-                              prompt           => "text prompt",
-                              title            => 'My Silly Menu',
-                              items            => [ qw (foo bar baz biff spork boof akak) ],
-                              order            => 'across',
-                              rows             => 1,
-                              cols             => 1,
-                              display_base     => 1,
-                              return_base      => 0,
-                              accept_multiple_selections => 0,
-                              accept_empty_selection     => 0
-                             },
-                        "help prompt", "default");
-
-    This will create a menu with numbered items to select. You replace the
-    normal *prompt* argument with a hash reference containing this
-    information:
-
-    prompt
-    The prompt string.
-
-    title
-    Text printed above the menu.
-
-    items
-    An array reference to the list of text items to display. They will be
-    numbered ascending in the order presented.
-
-    order
-    If set to 'across', the item numbers run across the menu:
-
-     1) foo    2) bar    3) baz
-     4) biff   5) spork  6) boof
-     7) akak
-
-    If set to 'down', the item numbers run down the menu:
-
-     1) foo    4) biff   7) akak
-     2) bar    5) spork
-     3) baz    6) boof
-
-    'down' is the default.
-
-    rows,cols
-    Forces the number of rows and columns. Otherwise, the number of rows and
-    columns is determined from the number of items and the maximum length of
-    an item with its number.
-
-    Usually, you would set rows = 1 or cols = 1 to force a non-wrapped
-    layout. Setting both in tandem is untested. Cavet programmer.
-
-    display_base,return_base
-    Internally, the items are indexed the 'Perl' way, from 0 to scalar -1.
-    The display_base is the number added to the index on the menu display.
-    The return_base is the number added to the index before the reply is
-    returned to the programmer.
-
-    The defaults are 1 and 0, respectively.
-
-    accept_multiple_selections
-    When set to logical true (1 will suffice), more than one menu item may
-    be selected. The return from *prompt()* will be an array or array ref,
-    depending on how it is called.
-
-    The default is 0. The return value is a single scalar containing the
-    selection.
-
-    accept_empty_selection
-    When set to logical true (1 will suffice), if no items are selected, the
-    menu will not be repeated and the 'empty' selection will be returned.
-    The value of an 'empty' selection is an empty array or a reference to
-    same, if *accept_multiple_selections* is in effect, or *undef* if not.
-
-  Other Functions and Variables
-    termwrap
-    Part of Term::Prompt is the optionally exported function termwrap, which
-    is used to wrap lines to the width of the currently selected filehandle
-    (or to STDOUT or STDERR if the width of the current filehandle cannot be
-    determined). It uses the GetTerminalSize function from Term::ReadKey
-    then Text::Wrap.
-
-    MULTILINE_INDENT
-    This package variable holds the string to be used to indent lines of a
-    multiline prompt, after the first line. The default is "\t", which is
-    how the module worked before the variable was exposed. If yo do not want
-    ANY indentation:
-
-     $Term::Prompt::MULTILINE_INDENT = '';
-
-AUTHOR
-    Mark Henderson (henderson@mcs.anl.gov or systems@mcs.anl.gov)
-
-    Primary contact author: Allen Smith (easmith@beatrice.rutgers.edu)
-
-    Menu additions by Matthew O. Persico (persicom@acedsl.com)
-
-SEE ALSO
-    perl, Term::ReadKey, and Text::Wrap.
-
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself, either Perl version 5.6.1 or,
+at your option, any later version of Perl 5 you may have available.

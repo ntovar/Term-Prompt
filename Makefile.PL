@@ -1,30 +1,15 @@
-#-*- perl -*-
+use 5.008001;
 use ExtUtils::MakeMaker;
 # See lib/ExtUtils/MakeMaker.pm for details of how to influence
 # the contents of the Makefile that is written.
-
-require 5.002;			# Prompt.pm has prototyping
-
-WriteMakefile('NAME'	=> 'Term::Prompt',
-	      'VERSION_FROM' => 'Prompt.pm', # finds $VERSION
-	      'PREREQ_PM' => {
-			      'Term::ReadKey' => 2.13
-			     },
-	      'dist' => {
-			 'COMPRESS'=>"gzip",
-			 'SUFFIX'=>"gz"
-			}
-	     );
-
-sub MY::dist_dir {
-  package MY; # so that "SUPER" works right
-  my $inherited = shift->SUPER::dist_dir(@_);
-  $inherited =~ s/(distdir\s*:)/$1 README/;
-  return $inherited;
-}
-
-sub MY::postamble {
-  return "\n" .
-    "README : \$(MAN1PODS) \$(MAN3PODS)\n" .
-      "\tCOLUMNS=76 pod2text \$(MAN1PODS) \$(MAN3PODS) > README\n";
-}
+WriteMakefile(
+    NAME              => 'Term::Prompt',
+    VERSION_FROM      => 'lib/Term/Prompt.pm', # finds $VERSION
+    ## Not sure about versions on prereqs, but there was never any req before this
+    ## so the 'default' should be safe.
+    PREREQ_PM         => {'Text::Wrap' => 1.0,
+			  'Term::ReadKey' => 1.0 },
+    ($] >= 5.005 ?     ## Add these new keywords supported since 5.005
+      (ABSTRACT_FROM  => 'lib/Term/Prompt.pm', # retrieve abstract from module
+       AUTHOR         => 'A. U. Thor <a.u.thor@a.galaxy.far.far.away>') : ()),
+);

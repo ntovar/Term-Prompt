@@ -1,6 +1,7 @@
 Changes
-MANIFEST
 Makefile.PL
-Prompt.pm
+MANIFEST
 README
-test.pl
+t/Term-Prompt.t
+lib/Term/Prompt.pm
+META.yml                                 Module meta-data (added by MakeMaker)
