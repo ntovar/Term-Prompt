@@ -8,7 +8,7 @@ use Text::Wrap;
 use Term::Size;
 
 BEGIN: {
-  $VERSION = '0.01';
+  $VERSION = '0.02';
 }
 
 @ISA = qw(Exporter);
@@ -117,9 +117,9 @@ sub prompt ($$$$;@) {
     # Now here is where things get real interesting
     
     if ( $type ) {
-      $ok = &typeit($mopt, $repl, $debug, $uc);
+      $ok = &typeit(lc($mopt), $repl, $debug, $uc);
     } elsif ( $legal ) {
-      $repl = $ok = &legalit($mopt, $repl, $uc, @things);
+      $repl = $ok = &legalit(lc($mopt), $repl, $uc, @things);
     } elsif ( $range ) {
       $ok = &rangeit($repl, $low, $high, $uc);
     } elsif ( $expr ) { 

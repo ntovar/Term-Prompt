@@ -3,3 +3,5 @@ Revision history for Perl extension Prompt.
 0.01  Tue Jul 28 21:04:22 1998
 	- original version; created by h2xs 1.18
 
+0.02  Fri Oct 22 15:31:45 1999
+	- bugfix for uppercase usage for XANCI types
