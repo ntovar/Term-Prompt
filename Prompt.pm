@@ -8,7 +8,7 @@ use Text::Wrap;
 use Term::Size;
 
 BEGIN: {
-  $VERSION = '0.02';
+  $VERSION = '0.03';
 }
 
 @ISA = qw(Exporter);
@@ -97,8 +97,23 @@ sub prompt ($$$$;@) {
     
     # print out the prompt string in all its gore
     print termwrap($prompt_full);
-    $repl = readline(*STDIN);
-    
+
+    my($old_divide) = undef;
+
+    if (defined($/)) {
+      $old_divide = $/;
+    }
+
+    $/ = "\n";
+
+    $repl = scalar(readline(*STDIN));
+
+    if (defined($old_divide)) {
+      $/ = $old_divide;
+    } else {
+      undef($/);
+    }
+
     chomp($repl);          # nuke the <CR>
     
     $repl =~ s/^\s*//;	# ignore leading white space
@@ -115,8 +130,10 @@ sub prompt ($$$$;@) {
     print termwrap("Reply: '$repl'\n") if $debug;
     
     # Now here is where things get real interesting
-    
-    if ( $type ) {
+
+    if ($uc && ($repl eq '')) {
+      $ok = 1;
+    } elsif ( $type ) {
       $ok = &typeit(lc($mopt), $repl, $debug, $uc);
     } elsif ( $legal ) {
       $repl = $ok = &legalit(lc($mopt), $repl, $uc, @things);
@@ -130,7 +147,7 @@ sub prompt ($$$$;@) {
       croak "No subroutine known for prompt option $mopt.";
     }
     
-    if ( $ok ) { 
+    if ( $ok ) {
       return $repl;
     } elsif ( $prompt_options ne '' ) {
       if ($uc) {
