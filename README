@@ -3,6 +3,11 @@ NAME
 
 SYNOPSIS
         use Term::Prompt;
+        $value = &prompt(...);
+
+        use Term::Prompt qw(termwrap);
+
+        print &termwrap(...);
 
 DESCRIPTION
      This perl routine will take a prompt, a default response and a list of
@@ -74,10 +79,19 @@ DESCRIPTION
      accepted as a response, even if there is no default; whether it actually is
      will depend on the type of prompt.
 
+  Other Functions
+
+    Part of Term::Prompt is the optionally exported function termwrap,
+    which is used to wrap lines to the width of the currently selected
+    filehandle (or to STDOUT or STDERR if the width of the current
+    filehandle cannot be determined). It uses the GetTerminalSize
+    function from Term::ReadKey then Text::Wrap.
+
 AUTHOR
     Mark Henderson (henderson@mcs.anl.gov or systems@mcs.anl.gov)
     Primary contact author: Allen Smith (easmith@beatrice.rutgers.edu)
 
 SEE ALSO
-    perl(1).
+    the perl manpage, the Term::ReadKey manpage, and the Text::Wrap
+    manpage.
 

@@ -3,17 +3,16 @@ require 5.000;
 require Exporter;
 use Carp;
 
-use Text::Abbrev;
 use Text::Wrap;
 use Term::ReadKey qw(GetTerminalSize);
 
 BEGIN: {
-  $VERSION = '0.05';
+  $VERSION = '0.06';
 }
 
 @ISA = qw(Exporter);
 @EXPORT = qw(prompt);
-@EXPORT_OK = qw(rangeit legalit typeit exprit yesit);
+@EXPORT_OK = qw(rangeit legalit typeit exprit yesit termwrap);
 
 sub prompt ($$$$;@) {
   my($debug) = 0;		# debugging
@@ -136,7 +135,7 @@ sub prompt ($$$$;@) {
     } elsif ( $type ) {
       $ok = &typeit(lc($mopt), $repl, $debug, $uc);
     } elsif ( $legal ) {
-      $repl = $ok = &legalit(lc($mopt), $repl, $uc, @things);
+      ($ok,$repl) = &legalit(lc($mopt), $repl, $uc, @things);
     } elsif ( $range ) {
       $ok = &rangeit($repl, $low, $high, $uc);
     } elsif ( $expr ) { 
@@ -178,25 +177,27 @@ sub legalit ($$$@) {
   # it checks case based on c = case check, i = ignore case
   
   my($mopt, $repl, $uc, @things) = @_;
-  my(@match,$tmp) = ();
-  
-  local(%abbrevhash) = ();
-  abbrev(*abbrevhash,@things);
-  
-  if ( $mopt eq "i" ) {
-    my(%abbrevhash2) = %abbrevhash;
-    foreach $key (keys %abbrevhash2) {
-      $abbrevhash{lc($key)} = $abbrevhash{$key};
+  my(@match) = ();
+
+  if (grep {$_ eq $repl} (@things)) {
+    return 1, $repl;		# save time
+  }
+
+  my($quote_repl) = quotemeta($repl);
+  if ($mopt eq "i") {
+    @match = grep {$_ =~ m/$quote_repl/i} (@things);
+  } else {
+    @match = grep {$_ =~ m/$quote_repl/} (@things);
+  }
+
+  if (scalar(@match) == 1) {
+    return 1, $match[0];
+  } else {
+    if (! $uc) {
+      print "Invalid.  ";
     }
-    $repl = lc($repl);
+    return 0, "";
   }
-  
-  if (exists ($abbrevhash{$repl})) {
-    return $abbrevhash{$repl};
-  } elsif (! $uc) {
-    print "Invalid.  ";
-  }
-  return 0;
 }
 
 sub typeit ($$$$) {
@@ -282,6 +283,20 @@ sub termwrap ($;@) {
     local($SIG{__DIE__});
     (GetTerminalSize(select))[0];
   } || eval {
+    if (-T STDOUT) {
+      local($SIG{__DIE__});
+      return (GetTerminalSize(STDOUT))[0];
+    } else {
+      return 0;
+    }
+  } || eval {
+    if (-T STDERR) {
+      local($SIG{__DIE__});
+      return (GetTerminalSize(STDERR))[0];
+    } else {
+      return 0;
+    }
+  } || eval {
     local($SIG{__DIE__});
     (GetTerminalSize(STDOUT))[0];
   } || eval {
@@ -289,7 +304,7 @@ sub termwrap ($;@) {
     (GetTerminalSize(STDERR))[0];
   };
 
-  if ($width) {
+  if (defined($width) && $width) {
     $Text::Wrap::Columns = $width;
   }
 
@@ -316,6 +331,11 @@ Term::Prompt - Perl extension for prompting a user for information
 =head1 SYNOPSIS
 
     use Term::Prompt;
+    $value = &prompt(...);
+
+    use Term::Prompt qw(termwrap);
+
+    print &termwrap(...);
 
 =head1 DESCRIPTION
 
@@ -389,6 +409,13 @@ Term::Prompt - Perl extension for prompting a user for information
  accepted as a response, even if there is no default; whether it actually is
  will depend on the type of prompt.
 
+=head2 Other Functions
+
+Part of Term::Prompt is the optionally exported function termwrap, which is
+used to wrap lines to the width of the currently selected filehandle (or to
+STDOUT or STDERR if the width of the current filehandle cannot be determined).
+It uses the GetTerminalSize function from Term::ReadKey then Text::Wrap.
+
 =head1 AUTHOR
 
 Mark Henderson (henderson@mcs.anl.gov or systems@mcs.anl.gov)
@@ -396,7 +423,7 @@ Primary contact author: Allen Smith (easmith@beatrice.rutgers.edu)
 
 =head1 SEE ALSO
 
-perl(1).
+L<perl>, L<Term::ReadKey>, and L<Text::Wrap>.
 
 =cut
 

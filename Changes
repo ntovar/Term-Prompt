@@ -18,3 +18,8 @@ Revision history for Perl extension Term::Prompt.
 	- Missing right bracket restored... my thanks to
 	  schinder@pobox.com. I have no idea how I didn't load in 0.04 
 	  here and spot the problem...
+
+0.06  Tue Nov 30 18:55:24 EST 1999
+	- termwrap made EXPORT_OK, description added to manpage. Bug in
+	  legalit not accepting 0 as legal fixed. Abbreviation code
+	  modified to more efficient (copying off of Getopt::Long).
