@@ -9,7 +9,7 @@ require Exporter;
 our @ISA = qw (Exporter);
 our @EXPORT_OK = qw (rangeit legalit typeit menuit exprit yesit coderefit termwrap);
 our @EXPORT = qw (prompt);
-our $VERSION = '1.00';
+our $VERSION = '1.01';
 
 our $DEBUG = 0;
 our $MULTILINE_INDENT = "\t";
@@ -62,7 +62,7 @@ sub prompt ($$$$;@) {
 	$uc = 1;
 	$mopt = lc($mopt);
     }
-    
+
     if ($mopt eq "x" || $mopt eq "a" || ($mopt =~ /n$/) || $mopt eq "f") {
 	# More efficient this way - Allen
 	($mopt, $prompt, $prompt_options, $default) = @_;
@@ -79,7 +79,7 @@ sub prompt ($$$$;@) {
     } elsif ($mopt eq "e") {
 	($mopt, $prompt, $prompt_options, $default, $regexp) = @_;
 	$expr = 1;
-    } elsif ($mopt eq "c") {
+    } elsif ($mopt eq "s") {
 	($mopt, $prompt, $prompt_options, $default, $coderef) = @_;
 	ref($coderef) eq 'CODE' || die("No valid code reference supplied");
 	$code = 1;
@@ -93,7 +93,7 @@ sub prompt ($$$$;@) {
 		$prompt_options = "y or n";
 	    }
 	}
-	
+
 	if (defined($default)) {
 	    unless ($default =~ m/^[ynYN]/) {
 		if ($default) {
@@ -809,7 +809,7 @@ Original Author: Mark Henderson (henderson@mcs.anl.gov or
 systems@mcs.anl.gov). Derived from im_prompt2.pl, from anlpasswd (see
 ftp://info.mcs.anl.gov/pub/systems/), with permission.
 
-Contributors: 
+Contributors:
 
 E. Allen Smith (easmith@beatrice.rutgers.edu): Revisions for Perl 5,
 additions of alternative help text presentation, floating point type,

@@ -1,5 +1,12 @@
 Revision history for Perl extension Term::Prompt.
 
+1.01  Thu May 13 21:30:00 2004
+	- Corrected typo at line 82 in Prompt.pm - the entry for code
+	ref was left a 'c' when merged in from Tuomas Jormola's
+	additions instead of changed to an 's. Obviously, this needs a
+	better test suite. Bug 6249 at rt.cpan.org. Thank you, Robert
+	Schott.
+
 1.00  Sat May 08 17:00:00 2004
 	- Corrected type in Changes for 0.13 entry.
         - Made all Perl version references the same. 5.6.1 is
