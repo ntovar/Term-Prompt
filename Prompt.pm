@@ -5,10 +5,10 @@ use Carp;
 
 use Text::Abbrev;
 use Text::Wrap;
-use Term::Size;
+use Term::ReadKey qw(GetTerminalSize);
 
 BEGIN: {
-  $VERSION = '0.03';
+  $VERSION = '0.04';
 }
 
 @ISA = qw(Exporter);
@@ -42,7 +42,7 @@ sub prompt ($$$$;@) {
     $mopt = lc($mopt);
   }
 
-  if ( $mopt eq "x" || $mopt eq "a" || $mopt eq "n" ) {
+  if ( $mopt eq "x" || $mopt eq "a" || $mopt eq "n" || $mopt eq "f" ) {
     # More efficient this way - Allen
     ($mopt, $prompt, $prompt_options, $default) = @_;
     $type = 1;
@@ -226,6 +226,14 @@ sub typeit ($$$$) {
     }
     return 0;
   }
+
+  if ( $mopt eq "f" ) {
+    if (( $repl =~ m/^-?[0-9]+\.?[0-9]*$/ ) ||
+	( $repl =~ m/^-?[0-9]*\.[0-9]+$/ )) {
+      return 1;
+    } elsif (! $uc) {
+      print "Invalid floating point value.  ";
+    }
 }
 
 sub exprit ($$$$) {
@@ -268,25 +276,20 @@ sub termwrap ($;@) {
   } else {
     $message = $_[0];
   }
-    
-  if (select eq "STDERR") {
-    if ((-t STDERR) &&
-	defined($width = scalar(Term::Size::chars(*STDERR))) && ($width > 0)) {
-      $Text::Wrap::columns = $width;
-    } elsif ((-t STDOUT) &&
-	     defined($width = scalar(Term::Size::chars(*STDOUT))) &&
-	     ($width > 0)) {
-      $Text::Wrap::columns = $width;
-    }
-  } else {
-    if ((-t STDOUT) && defined($width = scalar(Term::Size::chars(*STDOUT))) &&
-	($width > 0)) {
-      $Text::Wrap::columns = $width;
-    } elsif ((-t STDERR) &&
-	     defined($width = scalar(Term::Size::chars(*STDERR))) &&
-	     ($width > 0)) {
-      $Text::Wrap::columns = $width;
-    }
+
+  my($width) = eval {
+    local($SIG{__DIE__});
+    (GetTerminalSize(select))[0];
+  } || eval {
+    local($SIG{__DIE__});
+    (GetTerminalSize(STDOUT))[0];
+  } || eval {
+    local($SIG{__DIE__});
+    (GetTerminalSize(STDERR))[0];
+  };
+
+  if ($width) {
+    $Text::Wrap::Columns = $width;
   }
 
   if ($message =~ m/\n\Z/) {
@@ -324,8 +327,9 @@ Term::Prompt - Perl extension for prompting a user for information
 
  Derived from im_prompt2.pl, from anlpasswd (see
  ftp://info.mcs.anl.gov/pub/systems/), with permission. Revisions for Perl 5,
- addition of alternative help text presentation, addition of regular
- expression type, addition of yes/no type, and line wrapping by E. Allen Smith.
+ addition of alternative help text presentation, addition of floating point
+ type, addition of regular expression type, addition of yes/no type, and line
+ wrapping by E. Allen Smith.
 
  Additional "types" that could be added would be a phone type,
  a social security type, a generic numeric pattern type...
@@ -333,13 +337,15 @@ Term::Prompt - Perl extension for prompting a user for information
  The usage is the following:
  x = don't care, a = alpha-only, n = numeric-only, i = ignore case
  c = case sensitive, r = ranged by the low and high values
- y = yes/no, e = regular expression - Added by Allen
+ f = floating-point, y = yes/no, e = regular expression - Added by Allen
 
  $result = &prompt("x", "text prompt", "help prompt", "default" );
 
  $result = &prompt("a", "text prompt", "help prompt", "default" );
 
  $result = &prompt("n", "text prompt", "help prompt", "default" );
+
+ The result will be a positive integer or 0.
 
  $result = &prompt("i", "text prompt", "help prompt", "default",
 	                 "legal_options-ignore-case-list");
@@ -349,6 +355,10 @@ Term::Prompt - Perl extension for prompting a user for information
 
  $result = &prompt("r", "text prompt", "help prompt", "default",
                        "low", "high");
+
+ $result = &prompt("f", "text prompt", "help prompt", "default" );
+
+ The result will be a floating-point number.
 
  $result = &prompt("y", "text prompt", "help prompt", "default")
 

@@ -13,8 +13,9 @@ DESCRIPTION
 
      Derived from im_prompt2.pl, from anlpasswd (see
      ftp://info.mcs.anl.gov/pub/systems/), with permission. Revisions for Perl 5,
-     addition of alternative help text presentation, addition of regular
-     expression type, addition of yes/no type, and line wrapping by E. Allen Smith.
+     addition of alternative help text presentation, addition of floating point
+     type, addition of regular expression type, addition of yes/no type, and line
+     wrapping by E. Allen Smith.
 
      Additional "types" that could be added would be a phone type,
      a social security type, a generic numeric pattern type...
@@ -22,13 +23,15 @@ DESCRIPTION
      The usage is the following:
      x = don't care, a = alpha-only, n = numeric-only, i = ignore case
      c = case sensitive, r = ranged by the low and high values
-     y = yes/no, e = regular expression - Added by Allen
+     f = floating-point, y = yes/no, e = regular expression - Added by Allen
 
      $result = &prompt("x", "text prompt", "help prompt", "default" );
 
      $result = &prompt("a", "text prompt", "help prompt", "default" );
 
      $result = &prompt("n", "text prompt", "help prompt", "default" );
+
+     The result will be a positive integer or 0.
 
      $result = &prompt("i", "text prompt", "help prompt", "default",
                              "legal_options-ignore-case-list");
@@ -38,6 +41,10 @@ DESCRIPTION
 
      $result = &prompt("r", "text prompt", "help prompt", "default",
                            "low", "high");
+
+     $result = &prompt("f", "text prompt", "help prompt", "default" );
+
+     The result will be a floating-point number.
 
      $result = &prompt("y", "text prompt", "help prompt", "default")
 
