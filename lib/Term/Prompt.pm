@@ -9,7 +9,7 @@ require Exporter;
 our @ISA = qw (Exporter);
 our @EXPORT_OK = qw (rangeit legalit typeit menuit exprit yesit coderefit termwrap);
 our @EXPORT = qw (prompt);
-our $VERSION = '0.13';
+our $VERSION = '1.00';
 
 our $DEBUG = 0;
 our $MULTILINE_INDENT = "\t";
@@ -832,5 +832,5 @@ L<perl>, L<Term::ReadKey>, and L<Text::Wrap>.
 Copyright (C) 2004 by Matthew O. Persico
 
 This library is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself, either Perl version 5.8.1 or,
+it under the same terms as Perl itself, either Perl version 5.6.1 or,
 at your option, any later version of Perl 5 you may have available.
