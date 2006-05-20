@@ -3,5 +3,5 @@ Makefile.PL
 MANIFEST
 README
 t/Term-Prompt.t
+Expect.pl
 lib/Term/Prompt.pm
-META.yml                                 Module meta-data (added by MakeMaker)
