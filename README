@@ -1,7 +1,8 @@
-Term-Prompt version 0.01
+Term-Prompt version 0.13
 ========================
 
-Term::Prompt - Print a menu to the screen and ask for an answer.
+Module to handle various forms of user input via terminal. Currently
+maintained by Matthew O. Persico <persicom@cpan.org>.
 
 INSTALLATION
 
@@ -12,20 +13,23 @@ To install this module type the following:
    make test
    make install
 
+No XS code is used, therfore no 'C' compiler is required.
+
 DEPENDENCIES
 
 This module requires these other modules and libraries:
 
-  Test::Expect (to test)
+ Text::Wrap;
+ Term::ReadKey;
+
+Minimum versions are not established; The latest versions should
+certainly work. If you have an older version that does not work,
+please advise the maintainer.
 
 COPYRIGHT AND LICENCE
 
-Somebody please tell me a good license to take. I really don't know.
-
-Copyright (C) 2006 by Sjors Gielen
+Copyright (C) 2004 by Matthew O. Persico
 
 This library is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself, either Perl version 5.8.4 or,
+it under the same terms as Perl itself, either Perl version 5.6.1 or,
 at your option, any later version of Perl 5 you may have available.
-
-
