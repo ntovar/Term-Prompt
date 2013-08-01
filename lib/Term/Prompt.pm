@@ -6,558 +6,570 @@ use warnings;
 
 require Exporter;
 
-our @ISA = qw (Exporter);
+our @ISA       = qw (Exporter);
 our @EXPORT_OK = qw (rangeit legalit typeit menuit exprit yesit coderefit termwrap);
-our @EXPORT = qw (prompt);
-our $VERSION = '1.04';
+our @EXPORT    = qw (prompt);
+our $VERSION   = '1.04';
 
-our $DEBUG = 0;
+our $DEBUG            = 0;
 our $MULTILINE_INDENT = "\t";
 
 use Carp;
 use Text::Wrap;
 use Term::ReadKey qw (GetTerminalSize
-                      ReadMode);
+  ReadMode);
 
 my %menu = (
-	    order => 'down',
-	    return_base => 0,
-	    display_base => 1,
-	    accept_multiple_selections => 0,
-	    accept_empty_selection => 0,
-	    title => '',
-	    prompt => '>',
-	    separator => '[^0-9]+',
-	    ignore_whitespace => 0,
-	    ignore_empties => 0
-	   );
+	order                      => 'down',
+	return_base                => 0,
+	display_base               => 1,
+	accept_multiple_selections => 0,
+	accept_empty_selection     => 0,
+	title                      => '',
+	prompt                     => '>',
+	separator                  => '[^0-9]+',
+	ignore_whitespace          => 0,
+	ignore_empties             => 0
+);
 
 # Preloaded methods go here.
 
 sub prompt ($$$$;@) {
 
-    my($mopt, $prompt, $prompt_options, $default, @things) =
-      ('','','',undef,());
-    my($repl, $match_options, $case, $low, $high, $before, $regexp, $coderef) =
-      ('','','','','','','','');
-    my $prompt_full = '';
+	my ( $mopt, $prompt, $prompt_options, $default, @things ) = ( '', '', '', undef, () );
+	my ( $repl, $match_options, $case, $low, $high, $before, $regexp, $coderef ) =
+	  ( '', '', '', '', '', '', '', '' );
+	my $prompt_full = '';
 
-    # Figure out just what we are doing here
-    $mopt = $_[0];
-    print "mopt is: $mopt\n" if $DEBUG;
+	# Figure out just what we are doing here
+	$mopt = $_[0];
+	print "mopt is: $mopt\n" if $DEBUG;
 
-    # check the size of the match option, it should just have one char.
-    if (length($mopt) == 1
-	or $mopt =~ /\-n/i
-	or $mopt =~ /\+-n/i) {
-	my $dummy = 'mopt is ok';
-    } else {
-	croak "Illegal call of prompt; $mopt is more than one character; stopped";
-    }
+	# check the size of the match option, it should just have one char.
+	if (   length($mopt) == 1
+		or $mopt =~ /\-n/i
+		or $mopt =~ /\+-n/i ) {
+		my $dummy = 'mopt is ok';
+	} else {
+		croak "Illegal call of prompt; $mopt is more than one character; stopped";
+	}
 
-    my $type = 0;
-    my $menu = 0;
-    my $legal = 0;
-    my $range = 0;
-    my $expr = 0;
-    my $code = 0;
-    my $yn = 0;
-    my $uc = 0;
-    my $passwd = 0;
+	my $type   = 0;
+	my $menu   = 0;
+	my $legal  = 0;
+	my $range  = 0;
+	my $expr   = 0;
+	my $code   = 0;
+	my $yn     = 0;
+	my $uc     = 0;
+	my $passwd = 0;
 
-    if ($mopt ne lc($mopt)) {
-	$uc = 1;
+	if ( $mopt ne lc($mopt) ) {
+		$uc   = 1;
+		$mopt = lc($mopt);
+	}
+
+	if ( $mopt eq 'x' || $mopt eq 'a' || ( $mopt =~ /n$/ ) || $mopt eq 'f' ) {
+
+		# More efficient this way - Allen
+		( $mopt, $prompt, $prompt_options, $default ) = @_;
+		$type = 1;
+	} elsif ( $mopt eq 'm' ) {
+		( $mopt, $prompt, $prompt_options, $default ) = @_;
+		$menu = 1;
+	} elsif ( $mopt eq 'c' || $mopt eq 'i' ) {
+		( $mopt, $prompt, $prompt_options, $default, @things ) = @_;
+		$legal = 1;
+	} elsif ( $mopt eq 'r' ) {
+		( $mopt, $prompt, $prompt_options, $default, $low, $high ) = @_;
+		$range = 1;
+	} elsif ( $mopt eq 'e' ) {
+		( $mopt, $prompt, $prompt_options, $default, $regexp ) = @_;
+		$expr = 1;
+	} elsif ( $mopt eq 's' ) {
+		( $mopt, $prompt, $prompt_options, $default, $coderef ) = @_;
+		ref($coderef) eq 'CODE' || die('No valid code reference supplied');
+		$code = 1;
+	} elsif ( $mopt eq 'y' ) {
+		( $mopt, $prompt, $prompt_options, $default ) = @_;
+		$yn = 1;
+		unless ( defined($prompt_options) && length($prompt_options) ) {
+			if ($uc) {
+				$prompt_options = 'Enter y or n';
+			} else {
+				$prompt_options = 'y or n';
+			}
+		}
+
+		if ( defined($default) ) {
+			unless ( $default =~ m/^[ynYN]/ ) {
+				if ($default) {
+					$default = 'y';
+				} else {
+					$default = 'n';
+				}
+			}
+		} else {
+			$default = 'n';
+		}
+	} elsif ( $mopt eq 'p' ) {
+		( $mopt, $prompt, $prompt_options, $default ) = @_;
+		$passwd = 1;
+	} else {
+		croak "prompt type $mopt not recognized";
+	}
+
+	my $ok = 0;
+
 	$mopt = lc($mopt);
-    }
 
-    if ($mopt eq 'x' || $mopt eq 'a' || ($mopt =~ /n$/) || $mopt eq 'f') {
-	# More efficient this way - Allen
-	($mopt, $prompt, $prompt_options, $default) = @_;
-	$type = 1;
-    } elsif ($mopt eq 'm') {
-	($mopt, $prompt, $prompt_options, $default) = @_;
-	$menu = 1;
-    } elsif ($mopt eq 'c' || $mopt eq 'i') {
-	($mopt, $prompt, $prompt_options, $default, @things) = @_;
-	$legal = 1;
-    } elsif ($mopt eq 'r') {
-	($mopt, $prompt, $prompt_options, $default, $low, $high) = @_;
-	$range = 1;
-    } elsif ($mopt eq 'e') {
-	($mopt, $prompt, $prompt_options, $default, $regexp) = @_;
-	$expr = 1;
-    } elsif ($mopt eq 's') {
-	($mopt, $prompt, $prompt_options, $default, $coderef) = @_;
-	ref($coderef) eq 'CODE' || die('No valid code reference supplied');
-	$code = 1;
-    } elsif ($mopt eq 'y') {
-	($mopt, $prompt, $prompt_options, $default) = @_;
-	$yn = 1;
-	unless (defined($prompt_options) && length($prompt_options)) {
-	    if ($uc) {
-		$prompt_options = 'Enter y or n';
-	    } else {
-		$prompt_options = 'y or n';
-	    }
-	}
+	while (1) {
 
-	if (defined($default)) {
-	    unless ($default =~ m/^[ynYN]/) {
-		if ($default) {
-		    $default = 'y';
+		if ( !$menu ) {
+
+			# print out the prompt string in all its gore
+			$prompt_full = "$prompt ";
+
 		} else {
-		    $default = 'n';
+
+			## We're working on a menu
+			@menu{sort keys %{$prompt}} = @{$prompt}{sort keys %{$prompt}};
+
+			$prompt_full = "$menu{'prompt'} ";
+
+			my @menu_items        = @{$menu{'items'}};
+			my $number_menu_items = scalar(@menu_items);
+
+			$menu{'low'}  = $menu{'display_base'};
+			$menu{'high'} = $number_menu_items + $menu{'display_base'} - 1;
+
+			my $digits_in_menu_item = ( int( log( $menu{'high'} ) / log(10) ) + 1 );
+
+			my $entry_length = 0;
+			my $item_length  = 0;
+			for (@menu_items) {
+				$entry_length = length($_)
+				  if length($_) > $entry_length;
+			}
+			$item_length = $entry_length;
+			$entry_length += (
+				$digits_in_menu_item    ## Max number of digits in a selection
+				  + 3                   ## two for ') ', at least one for a column separator
+			);
+
+			my $gw = get_width();
+
+			my $num_cols = (
+				defined( $menu{'cols'} )
+				? $menu{'cols'}
+				: int( $gw / $entry_length ) );
+			$num_cols ||= 1;            # Could be zero if longest entry in a
+			                            # list is wider than the screen
+			my $num_rows = (
+				defined( $menu{'rows'} )
+				? $menu{'rows'}
+				: int( $number_menu_items / $num_cols ) + 1
+			);
+
+			my $data_fmt       = "%${digits_in_menu_item}d) %-${item_length}.${item_length}s";
+			my $column_end_fmt = ("%s ");
+			my $line_end_fmt   = ("%s\n");
+			my @menu_out       = ();
+			my $row            = 0;
+			my $col            = 0;
+			my $idx            = 0;
+
+			if ( $menu{order} =~ /ACROSS/i ) {
+			  ACROSS_LOOP:
+				for ( $row = 0 ; $row < $num_rows ; $row++ ) {
+					for ( $col = 0 ; $col < $num_cols ; $col++ ) {
+						$menu_out[$row][$col] =
+						  sprintf( $data_fmt, $idx + $menu{'display_base'}, $menu_items[$idx++] );
+						last ACROSS_LOOP
+						  if $idx eq scalar(@menu_items);
+					}
+				}
+			} else {
+			  DOWN_LOOP:
+				for ( $col = 0 ; $col < $num_cols ; $col++ ) {
+					for ( $row = 0 ; $row < $num_rows ; $row++ ) {
+						$menu_out[$row][$col] =
+						  sprintf( $data_fmt, $idx + $menu{'display_base'}, $menu_items[$idx++] );
+						last DOWN_LOOP
+						  if $idx eq scalar(@menu_items);
+					}
+				}
+			}
+
+			if ( length( $menu{'title'} ) ) {
+				print $menu{'title'}, "\n", '-' x length( $menu{'title'} ), "\n";
+			}
+
+			for ( $row = 0 ; $row < $num_rows ; $row++ ) {
+				for ( $col = 0 ; $col < $num_cols - 1 ; $col++ ) {
+					printf( $column_end_fmt, $menu_out[$row][$col] )
+					  if defined( $menu_out[$row][$col] );
+				}
+				if ( defined( $menu_out[$row][$num_cols - 1] ) ) {
+					printf( $line_end_fmt, $menu_out[$row][$num_cols - 1] );
+				} else {
+					print "\n";
+				}
+			}
+
+			if ( $number_menu_items != ($num_rows) * ($num_cols) ) {
+				print "\n";
+			}
+
+			unless ( defined($prompt_options) && length($prompt_options) ) {
+				$prompt_options = "$menu{'low'} - $menu{'high'}";
+				if ( $menu{'accept_multiple_selections'} ) {
+					$prompt_options .= ', separate multiple entries with spaces';
+				}
+			}
 		}
-	    }
-	} else {
-	    $default = 'n';
-	}
-    } elsif ($mopt eq 'p') {
-	($mopt, $prompt, $prompt_options, $default) = @_;
-	$passwd = 1;
-    } else {
-	croak "prompt type $mopt not recognized";
-    }
 
-    my $ok = 0;
-
-    $mopt = lc($mopt);
-
-    while (1) {
-
-	if (!$menu) {
-
-	    # print out the prompt string in all its gore
-	    $prompt_full = "$prompt ";
-
-	} else {
-
-	    ## We're working on a menu
-	    @menu{sort keys %{$prompt}} = @{$prompt}{sort keys %{$prompt}};
-
-	    $prompt_full = "$menu{'prompt'} ";
-
-	    my @menu_items = @{$menu{'items'}};
-	    my $number_menu_items = scalar(@menu_items);
-
-	    $menu{'low'} = $menu{'display_base'};
-	    $menu{'high'} = $number_menu_items+$menu{'display_base'}-1;
-
-	    my $digits_in_menu_item = (int(log($menu{'high'})/log(10)) + 1);
-
-	    my $entry_length = 0;
-	    my $item_length = 0;
-	    for (@menu_items) {
-		$entry_length = length($_)
-		  if length($_) > $entry_length;
-	    }
-	    $item_length = $entry_length;
-	    $entry_length += ( $digits_in_menu_item ## Max number of digits in a selection
-			       +
-			       3 ## two for ') ', at least one for a column separator
-			     );
-
-	    my $gw = get_width();
-
-	    my $num_cols = (defined($menu{'cols'})
-			    ? $menu{'cols'}
-			    : int($gw/$entry_length));
-	    $num_cols ||= 1; # Could be zero if longest entry in a
-	    # list is wider than the screen
-	    my $num_rows = (defined($menu{'rows'})
-			    ? $menu{'rows'}
-			    : int($number_menu_items/$num_cols)+1) ;
-
-	    my $data_fmt = "%${digits_in_menu_item}d) %-${item_length}.${item_length}s";
-	    my $column_end_fmt = ("%s ");
-	    my $line_end_fmt   = ("%s\n");
-	    my @menu_out = ();
-	    my $row = 0;
-	    my $col = 0;
-	    my $idx = 0;
-
-	    if ($menu{order} =~ /ACROSS/i) {
-	      ACROSS_LOOP:
-		for ($row = 0; $row < $num_rows; $row++) {
-		    for ($col = 0; $col < $num_cols; $col++) {
-			$menu_out[$row][$col] = sprintf($data_fmt,$idx+$menu{'display_base'},$menu_items[$idx++]);
-			last ACROSS_LOOP
-			  if $idx eq scalar(@menu_items);
-		    }
+		unless ( $before || $uc || ( $prompt_options eq '' ) ) {
+			$prompt_full .= "($prompt_options) ";
 		}
-	    } else {
-	      DOWN_LOOP:
-		for ($col = 0; $col < $num_cols; $col++) {
-		    for ($row = 0; $row < $num_rows; $row++) {
-			$menu_out[$row][$col] = sprintf($data_fmt,$idx+$menu{'display_base'},$menu_items[$idx++]);
-			last DOWN_LOOP
-			  if $idx eq scalar(@menu_items);
-		    }
-		}
-	    }
 
-	    if (length($menu{'title'})) {
-		print $menu{'title'},"\n",'-' x length($menu{'title'}),"\n";
-	    }
-
-	    for ($row = 0;$row < $num_rows;$row++) {
-		for ($col = 0;$col < $num_cols-1;$col++) {
-		    printf($column_end_fmt,$menu_out[$row][$col])
-		      if defined($menu_out[$row][$col]);
+		if ( defined($default) and $default ne '' ) {
+			$prompt_full .= "[default $default] ";
 		}
-		if (defined($menu_out[$row][$num_cols-1])) {
-		    printf($line_end_fmt,$menu_out[$row][$num_cols-1])
+
+		print termwrap($prompt_full);
+		my $old_divide = undef;
+
+		if ( defined($/) ) {
+			$old_divide = $/;
+		}
+
+		$/ = "\n";
+
+		ReadMode('noecho') if ($passwd);
+		$repl = scalar( readline(*STDIN) );
+		ReadMode('restore') if ($passwd);
+
+		if ( defined($old_divide) ) {
+			$/ = $old_divide;
 		} else {
-		    print "\n";
+			undef($/);
 		}
-	    }
 
-	    if ($number_menu_items != ($num_rows)*($num_cols)) {
-		print "\n";
-	    }
+		chomp($repl);    # nuke the <CR>
 
-	    unless (defined($prompt_options) && length($prompt_options)) {
-		$prompt_options = "$menu{'low'} - $menu{'high'}";
-		if ($menu{'accept_multiple_selections'}) {
-		    $prompt_options .= ', separate multiple entries with spaces';
+		$repl =~ s/^\s*//;    # ignore leading white space
+		$repl =~ s/\s*$//;    # ignore trailing white space
+
+		$repl = $default if $repl eq '';
+
+		if ( !$menu && ( $repl eq '' ) && ( !$uc ) ) {
+
+			# so that a simple return can be an end of a series of prompts - Allen
+			print "Invalid option\n";
+			next;
 		}
-	    }
-	}
 
-	unless ($before || $uc || ($prompt_options eq '')) {
-	    $prompt_full .= "($prompt_options) ";
-	}
+		print termwrap("Reply: '$repl'\n") if $DEBUG;
 
-	if (defined($default) and $default ne '') {
-	    $prompt_full .= "[default $default] ";
-	}
-
-	print termwrap($prompt_full);
-	my $old_divide = undef;
-
-	if (defined($/)) {
-	    $old_divide = $/;
-	}
-
-	$/ = "\n";
-
-	ReadMode('noecho') if($passwd);
-	$repl = scalar(readline(*STDIN));
-	ReadMode('restore') if($passwd);
-
-	if (defined($old_divide)) {
-	    $/ = $old_divide;
-	} else {
-	    undef($/);
-	}
-
-	chomp($repl);		# nuke the <CR>
-
-	$repl =~ s/^\s*//;	# ignore leading white space
-	$repl =~ s/\s*$//;	# ignore trailing white space
-
-	$repl = $default if $repl eq '';
-
-	if (!$menu && ($repl eq '') && (! $uc)) {
-	    # so that a simple return can be an end of a series of prompts - Allen
-	    print "Invalid option\n";
-	    next;
-	}
-
-	print termwrap("Reply: '$repl'\n") if $DEBUG;
-
-	# Now here is where things get real interesting
-	my @menu_repl = ();
-	if ($uc && ($repl eq '')) {
-	    $ok = 1;
-	} elsif ($type || $passwd) {
-	    $ok = typeit($mopt, $repl, $DEBUG, $uc);
-	} elsif ($menu) {
-	    $ok = menuit(\@menu_repl, $repl, $DEBUG, $uc);
-	} elsif ($legal) {
-	    ($ok,$repl) = legalit($mopt, $repl, $uc, @things);
-	} elsif ($range) {
-	    $ok = rangeit($repl, $low, $high, $uc);
-	} elsif ($expr) {
-	    $ok = exprit($repl, $regexp, $prompt_options, $uc, $DEBUG);
-	} elsif ($code) {
-	    $ok = coderefit($repl, $coderef, $prompt_options, $uc, $DEBUG);
-	} elsif ($yn) {
-	    ($ok,$repl) = yesit($repl, $uc, $DEBUG);
-	} else {
-	    croak "No subroutine known for prompt type $mopt.";
-	}
-
-	if ($ok) {
-	    if ($menu) {
-		if ($menu{'accept_multiple_selections'}) {
-		    return (wantarray ? @menu_repl : \@menu_repl);
+		# Now here is where things get real interesting
+		my @menu_repl = ();
+		if ( $uc && ( $repl eq '' ) ) {
+			$ok = 1;
+		} elsif ( $type || $passwd ) {
+			$ok = typeit( $mopt, $repl, $DEBUG, $uc );
+		} elsif ($menu) {
+			$ok = menuit( \@menu_repl, $repl, $DEBUG, $uc );
+		} elsif ($legal) {
+			( $ok, $repl ) = legalit( $mopt, $repl, $uc, @things );
+		} elsif ($range) {
+			$ok = rangeit( $repl, $low, $high, $uc );
+		} elsif ($expr) {
+			$ok = exprit( $repl, $regexp, $prompt_options, $uc, $DEBUG );
+		} elsif ($code) {
+			$ok = coderefit( $repl, $coderef, $prompt_options, $uc, $DEBUG );
+		} elsif ($yn) {
+			( $ok, $repl ) = yesit( $repl, $uc, $DEBUG );
 		} else {
-		    return $menu_repl[0];
+			croak "No subroutine known for prompt type $mopt.";
 		}
-	    } else {
-		return $repl;
-	    }
-	} elsif (defined($prompt_options) && length($prompt_options)) {
-	    if ($uc) {
-		print termwrap("$prompt_options\n");
-	    } else {
-		if (!$menu) {
-		    print termwrap("Options are: $prompt_options\n");
+
+		if ($ok) {
+			if ($menu) {
+				if ( $menu{'accept_multiple_selections'} ) {
+					return ( wantarray ? @menu_repl : \@menu_repl );
+				} else {
+					return $menu_repl[0];
+				}
+			} else {
+				return $repl;
+			}
+		} elsif ( defined($prompt_options) && length($prompt_options) ) {
+			if ($uc) {
+				print termwrap("$prompt_options\n");
+			} else {
+				if ( !$menu ) {
+					print termwrap("Options are: $prompt_options\n");
+				}
+				$before = 1;
+			}
 		}
-		$before = 1;
-	    }
 	}
-    }
 }
 
 sub rangeit ($$$$ ) {
-    # this routine makes sure that the reply is within a given range
 
-    my($repl, $low, $high, $uc) = @_;
+	# this routine makes sure that the reply is within a given range
 
-    if ( $low <= $repl && $repl <= $high ) {
-	return 1;
-    } elsif (!$uc) {
-	print 'Invalid range value.  ';
-    }
-    return 0;
+	my ( $repl, $low, $high, $uc ) = @_;
+
+	if ( $low <= $repl && $repl <= $high ) {
+		return 1;
+	} elsif ( !$uc ) {
+		print 'Invalid range value.  ';
+	}
+	return 0;
 }
 
 sub legalit ($$$@) {
-    # this routine checks to see if a repl is one of a set of 'things'
-    # it checks case based on c = case check, i = ignore case
 
-    my($mopt, $repl, $uc, @things) = @_;
-    my(@match) = ();
+	# this routine checks to see if a repl is one of a set of 'things'
+	# it checks case based on c = case check, i = ignore case
 
-    if (grep {$_ eq $repl} (@things)) {
-	return 1, $repl;	# save time
-    }
+	my ( $mopt, $repl, $uc, @things ) = @_;
+	my (@match) = ();
 
-    my $quote_repl = quotemeta($repl);
-
-    if ($mopt eq 'i') {
-	@match = grep {$_ =~ m/^$quote_repl/i} (@things);
-    } else {
-	@match = grep {$_ =~ m/^$quote_repl/} (@things);
-    }
-
-    if (scalar(@match) == 1) {
-	return 1, $match[0];
-    } else {
-	if (! $uc) {
-	    print 'Invalid.  ';
+	if ( grep { $_ eq $repl } (@things) ) {
+		return 1, $repl;    # save time
 	}
-	return 0, '';
-    }
+
+	my $quote_repl = quotemeta($repl);
+
+	if ( $mopt eq 'i' ) {
+		@match = grep { $_ =~ m/^$quote_repl/i } (@things);
+	} else {
+		@match = grep { $_ =~ m/^$quote_repl/ } (@things);
+	}
+
+	if ( scalar(@match) == 1 ) {
+		return 1, $match[0];
+	} else {
+		if ( !$uc ) {
+			print 'Invalid.  ';
+		}
+		return 0, '';
+	}
 }
 
 sub typeit ($$$$ ) {
-    # this routine does checks based on the following:
-    # x = no checks, a = alpha only, n = numeric only
-    my ($mopt, $repl, $dbg, $uc) = @_;
-    print "inside of typeit\n" if $dbg;
 
-    if ( $mopt eq 'x' or $mopt eq 'p' ) {
-	return 1;
-    } elsif ( $mopt eq 'a' ) {
-	if ( $repl =~ /^[a-zA-Z]*$/ ) {
-	    return 1;
-	} elsif (! $uc) {
-	    print 'Invalid type value.  ';
-	}
-    } elsif ( $mopt eq 'n' ) {
-	if ( $repl =~/^[0-9]*$/ ) {
-	    return 1;
-	} elsif (! $uc) {
-	    print 'Invalid numeric value. Must be a positive integer or 0. ';
-	}
-    } elsif ( $mopt eq '-n' ) {
-	if ( $repl =~/^-[0-9]*$/ ) {
-	    return 1;
-	} elsif (! $uc) {
-	    print 'Invalid numeric value. Must be a negative integer or 0. ';
-	}
-    } elsif ( $mopt eq '+-n' ) {
-	if ( $repl =~/^-?[0-9]*$/ ) {
-	    return 1;
-	} elsif (! $uc) {
-	    print 'Invalid numeric value. Must be an integer. ';
-	}
-    } elsif ( $mopt eq 'f' ) {
-	if ( $repl =~ /^([+-]?)(?=\d|\.\d)\d*(\.\d)?([Ee]([+-]?\d+))?$/) {
-	    return 1;
-	} elsif (! $uc) {
-	    print 'Invalid floating point value.  ';
-	}
-    } else {
-	croak "typeit called with unknown prompt type $mopt; stopped";
-    }
+	# this routine does checks based on the following:
+	# x = no checks, a = alpha only, n = numeric only
+	my ( $mopt, $repl, $dbg, $uc ) = @_;
+	print "inside of typeit\n" if $dbg;
 
-    return 0;
+	if ( $mopt eq 'x' or $mopt eq 'p' ) {
+		return 1;
+	} elsif ( $mopt eq 'a' ) {
+		if ( $repl =~ /^[a-zA-Z]*$/ ) {
+			return 1;
+		} elsif ( !$uc ) {
+			print 'Invalid type value.  ';
+		}
+	} elsif ( $mopt eq 'n' ) {
+		if ( $repl =~ /^[0-9]*$/ ) {
+			return 1;
+		} elsif ( !$uc ) {
+			print 'Invalid numeric value. Must be a positive integer or 0. ';
+		}
+	} elsif ( $mopt eq '-n' ) {
+		if ( $repl =~ /^-[0-9]*$/ ) {
+			return 1;
+		} elsif ( !$uc ) {
+			print 'Invalid numeric value. Must be a negative integer or 0. ';
+		}
+	} elsif ( $mopt eq '+-n' ) {
+		if ( $repl =~ /^-?[0-9]*$/ ) {
+			return 1;
+		} elsif ( !$uc ) {
+			print 'Invalid numeric value. Must be an integer. ';
+		}
+	} elsif ( $mopt eq 'f' ) {
+		if ( $repl =~ /^([+-]?)(?=\d|\.\d)\d*(\.\d)\d*?([Ee]([+-]?\d+))?$/ ) {
+			return 1;
+		} elsif ( !$uc ) {
+			print 'Invalid floating point value.  ';
+		}
+	} else {
+		croak "typeit called with unknown prompt type $mopt; stopped";
+	}
+
+	return 0;
 }
 
 sub menuit (\@$$$ ) {
-    my ($ra_repl, $repl, $dbg, $uc) = @_;
-    print "inside of menuit\n" if $dbg;
+	my ( $ra_repl, $repl, $dbg, $uc ) = @_;
+	print "inside of menuit\n" if $dbg;
 
-    my @msgs = ();
+	my @msgs = ();
 
-    ## Parse for multiple values. Strip all whitespace if requested or
-    ## just strip leading and trailing whitespace to avoid a being
-    ## interpreted as separating empty choices.
+	## Parse for multiple values. Strip all whitespace if requested or
+	## just strip leading and trailing whitespace to avoid a being
+	## interpreted as separating empty choices.
 
-    if($menu{'ignore_whitespace'}) {
-	$repl =~ s/\s+//g;
-    } else {
-	$repl =~ s/^(?:\s+)//;
-	$repl =~ s/(?:\s+)$//;
-    }
-
-    my @repls = split(/$menu{'separator'}/,$repl);
-    if($menu{ignore_empties}) {
-	@repls = grep{length($_)} @repls;
-    }
-
-    ## Validations
-    if ( scalar(@repls) > 1
-	 &&
-	 !$menu{'accept_multiple_selections'} ) {
-	push @msgs, 'Multiple choices not allowed.';
-    } elsif (!scalar(@repls)
-	     &&
-	     !$menu{'accept_empty_selection'}) {
-	push @msgs, 'You must make a selection.';
-    } else {
-	for (@repls) {
-	    if ( !rangeit($_,$menu{'low'},$menu{'high'},1)) {
-		push @msgs, "$_ is an invalid choice.";
-	    }
+	if ( $menu{'ignore_whitespace'} ) {
+		$repl =~ s/\s+//g;
+	} else {
+		$repl =~ s/^(?:\s+)//;
+		$repl =~ s/(?:\s+)$//;
 	}
-    }
 
-    ## Print errors or return values
-    if (scalar(@msgs)) {
-	print "\n",join("\n",@msgs),"\n\n";
-	return 0;
-    } else {
-	@{$ra_repl} = map {$_ - $menu{'display_base'} + $menu{'return_base'}} @repls;
-	return 1;
-    }
+	my @repls = split( /$menu{'separator'}/, $repl );
+	if ( $menu{ignore_empties} ) {
+		@repls = grep { length($_) } @repls;
+	}
+
+	## Validations
+	if ( scalar(@repls) > 1
+		&& !$menu{'accept_multiple_selections'} ) {
+		push @msgs, 'Multiple choices not allowed.';
+	} elsif ( !scalar(@repls)
+		&& !$menu{'accept_empty_selection'} ) {
+		push @msgs, 'You must make a selection.';
+	} else {
+		for (@repls) {
+			if ( !rangeit( $_, $menu{'low'}, $menu{'high'}, 1 ) ) {
+				push @msgs, "$_ is an invalid choice.";
+			}
+		}
+	}
+
+	## Print errors or return values
+	if ( scalar(@msgs) ) {
+		print "\n", join( "\n", @msgs ), "\n\n";
+		return 0;
+	} else {
+		@{$ra_repl} = map { $_ - $menu{'display_base'} + $menu{'return_base'} } @repls;
+		return 1;
+	}
 
 }
 
 sub exprit ($$$$$ ) {
-    # This routine does checks based on whether something
-    # matches a supplied regexp - Allen
-    my($repl, $regexp, $prompt_options, $uc, $dbg) = @_;
-    print "inside of exprit\n" if $dbg;
 
-    if ( $repl =~ /^$regexp$/ ) {
-	return 1;
-    } elsif ((!$uc) ||
-	     (!defined($prompt_options)) || (!length($prompt_options))) {
-	print termwrap("Reply needs to match regular expression /^$regexp$/.\n");
-    }
-    return 0;
+	# This routine does checks based on whether something
+	# matches a supplied regexp - Allen
+	my ( $repl, $regexp, $prompt_options, $uc, $dbg ) = @_;
+	print "inside of exprit\n" if $dbg;
+
+	if ( $repl =~ /^$regexp$/ ) {
+		return 1;
+	} elsif ( ( !$uc )
+		|| ( !defined($prompt_options) )
+		|| ( !length($prompt_options) ) ) {
+		print termwrap("Reply needs to match regular expression /^$regexp$/.\n");
+	}
+	return 0;
 }
 
 sub coderefit ($$$$$ ) {
-    # Execute supplied code reference with reply as argument and examine
-    # sub-routine's return value
-    my($repl, $coderef, $prompt_options, $uc, $dbg) = @_;
-    print "inside of coderefit\n" if $dbg;
 
-    if ( &$coderef($repl) ) {
-	return 1;
-    } elsif ((!$uc) ||
-	     (!defined($prompt_options)) || (!length($prompt_options))) {
-	print termwrap("Reply is invalid.\n");
-    }
-    return 0;
+	# Execute supplied code reference with reply as argument and examine
+	# sub-routine's return value
+	my ( $repl, $coderef, $prompt_options, $uc, $dbg ) = @_;
+	print "inside of coderefit\n" if $dbg;
+
+	if ( &$coderef($repl) ) {
+		return 1;
+	} elsif ( ( !$uc )
+		|| ( !defined($prompt_options) )
+		|| ( !length($prompt_options) ) ) {
+		print termwrap("Reply is invalid.\n");
+	}
+	return 0;
 }
 
 sub yesit ($$$ ) {
-    # basic yes or no - Allen
-    my ($repl, $uc, $dbg) = @_;
-    print "inside of yesit\n" if $dbg;
 
-    if ($repl =~ m/^[0nN]/) {
-	return 1,0;
-    } elsif ($repl =~ m/^[1yY]/) {
-	return 1,1;
-    } elsif (! $uc) {
-	print 'Invalid yes or no response. ';
-    }
-    return 0,0;
+	# basic yes or no - Allen
+	my ( $repl, $uc, $dbg ) = @_;
+	print "inside of yesit\n" if $dbg;
+
+	if ( $repl =~ m/^[0nN]/ ) {
+		return 1, 0;
+	} elsif ( $repl =~ m/^[1yY]/ ) {
+		return 1, 1;
+	} elsif ( !$uc ) {
+		print 'Invalid yes or no response. ';
+	}
+	return 0, 0;
 }
 
 sub termwrap ($;@) {
-    my($message) = '';
-    if ($#_ > 0) {
-	if (defined($,)) {
-	    $message = join($,,@_);
+	my ($message) = '';
+	if ( $#_ > 0 ) {
+		if ( defined($,) ) {
+			$message = join( $,, @_ );
+		} else {
+			$message = join( ' ', @_ );
+		}
 	} else {
-	    $message = join(' ',@_);
+		$message = $_[0];
 	}
-    } else {
-	$message = $_[0];
-    }
 
-    my $width = get_width();
+	my $width = get_width();
 
-    if (defined($width) && $width) {
-	$Text::Wrap::Columns = $width;
-    }
+	if ( defined($width) && $width ) {
+		$Text::Wrap::Columns = $width;
+	}
 
-    if ($message =~ m/\n\Z/) {
-	$message = wrap('', $MULTILINE_INDENT, $message);
-	$message =~ s/\n*\Z/\n/;
-	return $message;
-    } else {
-	$message = wrap('', $MULTILINE_INDENT, $message);
-	$message =~ s/\n*\Z//;
-	return $message;
-    }
+	if ( $message =~ m/\n\Z/ ) {
+		$message = wrap( '', $MULTILINE_INDENT, $message );
+		$message =~ s/\n*\Z/\n/;
+		return $message;
+	} else {
+		$message = wrap( '', $MULTILINE_INDENT, $message );
+		$message =~ s/\n*\Z//;
+		return $message;
+	}
 }
 
 sub get_width {
 
-    ## The 'use strict' added above caused the calls
-    ## GetTerminalSize(STDOUT) and GetTerminalSize(STDERR) to fail in
-    ## compilation. The fix as to REMOVE the parens. It seems as if
-    ## this call works the same way as 'print' - if you need to
-    ## specify the filehandle, you don't use parens (and don't put a
-    ## comma after the filehandle, although that is irrelevant here.)
+	## The 'use strict' added above caused the calls
+	## GetTerminalSize(STDOUT) and GetTerminalSize(STDERR) to fail in
+	## compilation. The fix as to REMOVE the parens. It seems as if
+	## this call works the same way as 'print' - if you need to
+	## specify the filehandle, you don't use parens (and don't put a
+	## comma after the filehandle, although that is irrelevant here.)
 
-    ## SO DON'T PUT THEM BACK! :-)
+	## SO DON'T PUT THEM BACK! :-)
 
-    my($width) = eval {
-	local($SIG{__DIE__});
-	(GetTerminalSize(select))[0];
-    } || eval {
-	if (-T STDOUT) {
-	    local($SIG{__DIE__});
-	    return (GetTerminalSize STDOUT )[0];
-	} else {
-	    return 0;
-	}
-    } || eval {
-	if (-T STDERR) {
-	    local($SIG{__DIE__});
-	    return (GetTerminalSize STDERR )[0];
-	} else {
-	    return 0;
-	}
-    } || eval {
-	local($SIG{__DIE__});
-	(GetTerminalSize STDOUT )[0];
-    } || eval {
-	local($SIG{__DIE__});
-	(GetTerminalSize STDERR )[0];
-    };
-    return $width;
+	my ($width) = eval {
+		local ( $SIG{__DIE__} );
+		( GetTerminalSize(select) )[0];
+	} || eval {
+		if ( -T STDOUT ) {
+			local ( $SIG{__DIE__} );
+			return ( GetTerminalSize STDOUT )[0];
+		} else {
+			return 0;
+		}
+	} || eval {
+		if ( -T STDERR ) {
+			local ( $SIG{__DIE__} );
+			return ( GetTerminalSize STDERR )[0];
+		} else {
+			return 0;
+		}
+	} || eval {
+		local ( $SIG{__DIE__} );
+		( GetTerminalSize STDOUT )[0];
+	} || eval {
+		local ( $SIG{__DIE__} );
+		( GetTerminalSize STDERR )[0];
+	};
+	return $width;
 }
 
 1;
